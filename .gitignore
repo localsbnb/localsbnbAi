@@ -58,3 +58,17 @@ dist.zip
 
 # Local git backup folder
 .git_backup_*
+
+# Non-runtime assets (do not upload)
+.cursor/
+skills/
+docker/
+docs/
+
+# Keep selected Cursor PM skill files tracked
+!.cursor/
+!.cursor/skills/
+!.cursor/skills/product-manager-skills/
+!.cursor/skills/product-manager-skills/SKILL.md
+!.cursor/skills/product-manager-skills/reference.md
+!.cursor/skills/product-manager-skills/examples.md
