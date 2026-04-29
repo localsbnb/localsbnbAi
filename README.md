@@ -1,76 +1,100 @@
-# 路客云 AI 助手
+# LocalsBnb AI（路客云 MCP 服务）
 
-## 这是什么？
+LocalsBnb AI 将路客云 PMS 的订单、房态房价、经营分析等核心能力统一封装为 MCP，  
+让门店与运营团队在现有沟通入口中即可通过自然语言完成“查询 -> 判断 -> 执行”，减少系统切换、提升协同效率。
 
-路客云 AI 助手让您可以在 **Cursor**、**Claude Desktop**、**Claude Code** 等 AI 工具中，直接用自然语言操作路客云 SPMS（酒店物业管理系统）。
-
-例如，您可以说：
-
-- 「查询今天的房态」
-- 「今天有哪些订单？」
-- 「帮我查一下本周的入住率」
-
-AI 会帮您调用路客云，并返回结果。
-
-## 能做什么？
-
-### 订单管理
-- 查询订单列表、订单详情
-- 办理入住 / 退房
-
-### 房态管理
-- 查询房态
-- 查询和更新房价
-- 批量更新价格
-
-### 数据分析
-- 查询经营数据、财务数据
-- 收益分析、入住率相关数据
-
-### 渠道管理
-- 查看渠道列表、渠道详情
-- 关联或解绑渠道
+服务可接入 OpenClaw、Hermes Agent 及任意支持 MCP 的客户端；  
+其中 **OpenClaw + 微信** 是当前落地最广、转化效率最高的组合，建议优先作为推广与实施路径。
 
 ---
 
-## 用户初始化与快速入门
+## 我们是什么
 
-### 一、前置条件
+LocalsBnb AI 是一层“AI 到路客云 API 的标准连接层”：
 
-| 项目 | 要求 |
-|------|------|
-| **Node.js** | ≥ 18.0（运行 `node -v` 检查） |
-| **路客云账号** | 已开通路客云 SPMS |
-| **访问凭证** | 已获取 **APP_SECRET** 与 **APP_ID**（由路客云管理员配置） |
-| **AI 客户端** | 已安装 Cursor、Claude Desktop 或 Claude Code |
+- 对上：提供统一 MCP 工具能力
+- 对下：调用路客云接口并处理鉴权、错误与权限
+- 对业务：让查询与操作可以直接通过自然语言完成
 
-### 二、获取访问凭证
+适用对象：门店运营、前台、店长、区域管理、技术实施团队。
 
-| 凭证 | 说明 | 示例格式 |
-|------|------|----------|
-| **APP_SECRET** | 路客云访问令牌，用于 API 鉴权 | 由路客云后台提供的 token 字符串 |
-| **APP_ID** | 营地/物业 ID，标识一家店或经营主体 | 数字字符串，如 `12345` |
+---
 
-请联系路客云管理员或进入路客云后台获取：https://minsubao.localhome.cn/ → 「设置」→「API 密钥管理」或联系技术支持。
+## 我们可以做什么
 
-> ⚠️ **安全提醒**：请勿将凭证分享给他人或提交到公开代码仓库。
+### 核心查询能力（当前可直接落地）
 
-### 三、选择安装方式
+- 订单看板：今日预抵 / 在住 / 预离一键汇总，快速识别当日待办
+- 订单详情：按订单号直达详情，减少前台和运营反复翻找
+- 房态与可售：支持今日快照与多日区间查询，适合排班与排房决策
+- 房价数据：支持按日期/自然周查看价格趋势，便于活动与调价判断
+- 经营分析：支持查看入住率、营收等核心指标，用于复盘与晨会
 
-**方式 A：npx 直接运行（推荐，免安装）** — 无需下载，首次运行自动拉取。
+### 管理价值（对门店最直接）
 
-**方式 B：解压包安装** — 从发布页下载 `lukeyun-pms-mcp-vX.X.X.zip`，解压后在目录下执行 `npm install --production`。
+- 把“查数据”从后台页面前移到对话入口，响应更快
+- 一线同学按自然语言提问即可获得可执行结果，培训成本低
+- 统一口径返回订单、房态、经营数据，减少跨角色信息偏差
 
-**方式 C：从源码构建** — 克隆项目后执行 `npm install` 和 `npm run build`，配置时指向 `dist/run.sh` 或 `dist/run.cjs`。
+### 能力边界说明
 
-### 四、配置 MCP 客户端
+- 当前版本以查询分析能力为主，已覆盖订单、房态、房价、经营数据主链路
+- 写操作能力可按账号权限与部署策略逐步开放
 
-#### 配置 Cursor
+---
 
-1. 打开 Cursor → `Cmd/Ctrl + ,` 打开设置 → 搜索「MCP」→ 找到 **MCP Servers** → 编辑 `~/.cursor/mcp.json`
-2. 添加配置（**替换凭证为你的实际值**）：
+## 我们可以怎么用
 
-**npx 方式（推荐）**
+你可以按组织现状选择入口，能力层一致。
+
+### 路径 A（推荐）: OpenClaw / Hermes Agent + IM
+
+在 OpenClaw 或 Hermes Agent 中接入 LocalsBnb MCP 后，可打通：
+
+- 微信
+- 企业微信
+- QQ
+- 飞书
+- 钉钉
+- iMessage
+
+典型对话：
+
+- 「查询今天房态」
+- 「查询近期房价」
+- 「今天预离还有几单？」
+- 「查看张三的订单详情」
+- 「看下本周入住率和营收」
+- 「帮我根据当前经营情况，并结合近期天气、节假日等情况给出调价建议」
+- 「拉取近 30 天入住率、房价、渠道占比和订单取消率，结合周末与节假日，给我一版下周调价策略（含涨降幅区间和执行优先级）」  
+- 「基于今日预抵/预离/在住结构，识别今晚可能的满房风险与空置风险，并给出房态和价格联动建议」  
+- 「结合最近一周经营数据与历史同周表现，输出门店晨会简报：异常指标、可能原因、今日行动项」  
+- 「对比近 14 天不同渠道订单质量（ADR、间夜、取消率），给出渠道投放与限房建议」  
+
+### 路径 B：MCP 客户端直连
+
+适合总部运营、区域管理、店长、实施团队进行日常查询与管理：
+
+- OpenClaw
+- Hermes Agent
+- Cursor
+- Claude Desktop
+- Claude Code
+- 其他 MCP 客户端
+
+---
+
+## 怎么配置
+
+### 1) 前置条件
+
+- 已开通路客云相关 API 权限
+- 获取必填凭证：
+  - `APP_SECRET`（访问令牌）
+  - `APP_ID`（访问ID）
+
+### 2) 通用 MCP 配置
+
 ```json
 {
   "mcpServers": {
@@ -78,50 +102,68 @@ AI 会帮您调用路客云，并返回结果。
       "command": "npx",
       "args": ["--yes", "localsbnb-mcp-server"],
       "env": {
-        "APP_SECRET": "<你的 token>",
-        "APP_ID": "<你的 campId>"
+        "APP_SECRET": "<你的 APP_SECRET>",
+        "APP_ID": "<你的 APP_ID>"
       }
     }
   }
 }
 ```
 
-**解压包 / 源码构建方式**
-```json
-{
-  "mcpServers": {
-    "LocalsBnb MCP": {
-      "command": "sh",
-      "args": ["/你的实际路径/dist/run.sh"],
-      "env": {
-        "APP_SECRET": "<你的 token>",
-        "APP_ID": "<你的 campId>"
-      }
-    }
-  }
-}
+### 3) OpenClaw / Hermes Agent（优先推荐）
+
+这是当前最主流、最容易规模化落地的接入方式，建议作为第一实施路径。
+
+1. 在 OpenClaw / Hermes Agent 中注册 LocalsBnb MCP（配置 `APP_SECRET` + `APP_ID`）  
+2. 绑定 IM 渠道（微信、企微、QQ、飞书、钉钉、iMessage）  
+3. 配置角色权限与可执行边界（谁可查、谁可操作、谁需二次确认）  
+4. 配置常用意图路由（如：今日房态、今日订单、订单详情、经营数据）  
+5. 以“查询今天房态 / 查询今日订单 / 输出晨会简报”完成联调验收
+
+> 建议先上线查询类能力，再逐步开放写操作，保证上线稳定性与组织接受度。
+
+#### OpenClaw 自然语言一键安装（推荐新手）
+
+如果你已将 MCP 发布到 GitHub 与 npm，可直接通过对话让 OpenClaw 完成安装与配置。
+
+**步骤 1：准备凭证**
+
+- 在路客云 SPMS 获取 `APP_SECRET` 与 `APP_ID`
+- 确认当前账号已开通对应查询权限（订单、房态、房价、经营数据）
+
+**步骤 2：在 OpenClaw 或 Hermes Agent 中发送安装指令**
+
+建议使用下面这句（比口语更稳定）：
+
+```text
+请帮我安装 localsbnb-mcp-server，并配置 MCP 服务名为 LocalsBnb MCP。
+使用环境变量：
+APP_SECRET=<你的APP_SECRET>
+APP_ID=<你的APP_ID>
+安装完成后请先执行“查询今天房态”和“查询今日订单”做连通性验证。
 ```
 
-> 若 `run.sh` 报错，可改用：`"command": "node"`，`"args": ["/你的路径/dist/run.cjs"]`
+**步骤 3：验收**
 
-3. 完全重启 Cursor
+- 能成功返回“今日房态”
+- 能成功返回“今日订单（预抵/在住/预离）”
+- 若失败，按错误提示检查 `APP_SECRET` / `APP_ID` 是否正确
 
-#### 配置 Claude Desktop
+> 安全建议：请在私聊或受控环境中发送凭证，不要在公开群聊明文发送。
 
-1. 找到配置文件：
-   - macOS：`~/Library/Application Support/Claude/claude_desktop_config.json`
-   - Windows：`%APPDATA%\Claude\claude_desktop_config.json`
-   - Linux：`~/.config/Claude/claude_desktop_config.json`
-2. 添加与上文相同的 `mcpServers` 配置块
-3. 保存并重启 Claude Desktop
+### 4) 其他 MCP 客户端（补充接入）
 
-#### 配置 Claude Code
+#### Cursor
 
-Claude Code 是终端版 Claude，通过 `claude mcp add` 添加 MCP 服务。包已发布到 npm，可直接用 npx 运行：
+编辑 `~/.cursor/mcp.json`，加入上面的 `mcpServers` 配置并重启 Cursor。
 
-**方式 1：命令行添加（推荐）**
+#### Claude Desktop
 
-在终端执行（**替换凭证为你的实际值**）。注意：**服务器名必须写在 `-e` 参数之前**：
+- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- Windows: `%APPDATA%\\Claude\\claude_desktop_config.json`
+- Linux: `~/.config/Claude/claude_desktop_config.json`
+
+#### Claude Code
 
 ```bash
 claude mcp add LocalsBnbMCP --scope user \
@@ -130,95 +172,32 @@ claude mcp add LocalsBnbMCP --scope user \
   -- npx -y localsbnb-mcp-server
 ```
 
-- 使用 `-e KEY=value` 传递环境变量（勿用 `--env`）
-- `--scope user`：所有项目可用；改为 `--scope local` 仅当前项目
+---
 
-**方式 2：手动编辑配置文件**
+## 常见问题
 
-在项目根目录创建或编辑 `.mcp.json`：
-
-```json
-{
-  "mcpServers": {
-    "LocalsBnb MCP": {
-      "command": "npx",
-      "args": ["-y", "localsbnb-mcp-server"],
-      "env": {
-        "APP_SECRET": "<你的 token>",
-        "APP_ID": "<你的 campId>"
-      }
-    }
-  }
-}
-```
-
-也可将 MCP 配置写入用户级 `~/.claude.json` 的 `mcpServers` 字段。
-
-**验证**：在 Claude Code 中输入 `/mcp` 查看是否已加载，或直接说「查询今天的房态」测试。
-
-### 五、验证配置
-
-- **Cursor**：`Cmd/Ctrl + Shift + P` → 输入「MCP」，查看是否出现 `LocalsBnb MCP` 相关工具
-- **Claude Desktop**：新开对话，输入 `@LocalsBnb MCP` 或「查询今天的房态」
-- **Claude Code**：输入 `/mcp` 查看工具，或直接说「查询今天的房态」
-
-若能返回房态、订单等数据，说明配置成功。
-
-### 六、可用工具一览
-
-| 工具名 | 说明 | 示例指令 |
-|--------|------|----------|
-| `query_today_orders` | 今日订单（预抵/在住/预离） | 「今天有哪些订单？」 |
-| `get_order_details_v2` | 订单详情 | 「查一下订单 12345 的详情」 |
-| `query_today_room_status` | 今日房态 | 「今天房态怎么样？」 |
-| `query_room_status_new` | 房型日历价（新接口） | 「查一下未来 7 天的房态和价格」 |
-| `query_room_prices` | 近期房价 | 「本周房价是多少？」 |
-| `query_operational_data_v2` | 运营数据 | 「今天的经营情况如何？」 |
-
-### 七、配置项速查
-
-| 环境变量 | 必填 | 说明 |
-|----------|------|------|
-| `APP_SECRET` | 是 | 路客云访问令牌 |
-| `APP_ID` | 是 | 营地 ID |
-| `LOG_LEVEL` | 否 | `info` / `debug`，调试用 |
-
-### 八、常见问题
-
-| 问题 | 解决 |
-|------|------|
-| 连接失败 / 无权限 | 确认 `APP_SECRET`、`APP_ID` 正确，且已开通 MCP/API 权限 |
-| 找不到工具 | 检查 JSON 格式、路径是否正确，完全重启客户端 |
-| ERR_REQUIRE_ESM | 使用 `dist/run.sh` 或 `dist/run.cjs` |
-| npx 缓存异常（Windows） | 执行 `npx clear-npx-cache` 后重试 |
+| 问题 | 处理方式 |
+|---|---|
+| 连接失败 / 无权限 | 核对 `APP_SECRET`、`APP_ID`，并确认路客云侧已开通权限 |
+| 秘钥错误 | 当前秘钥信息错误，请前往登录路客云 SPMS 获取秘钥，或联系路客云客户经理咨询 |
+| 找不到 MCP 工具 | 检查 JSON 格式、命令路径并重启客户端 |
+| `ERR_REQUIRE_ESM` | 优先使用 `dist/run.sh` 或 `dist/run.cjs` |
 
 ---
 
-## 使用场景示例
+## 安全建议
 
-| 您可以说 | AI 会帮您 |
-|---------|----------|
-| 今天有几间房是空房？ | 查询并展示今日房态 |
-| 本周入住率怎么样？ | 统计并展示入住率数据 |
-| 帮我查一下订单号为 XXX 的详情 | 返回该订单的完整信息 |
-| 明天 101 房的价格是多少？ | 查询并展示该房型价格 |
-
-## 部署方式
-
-- **云端使用**：由路客云托管，您只需完成配置即可使用
-- **本地部署**：如需在企业内网使用，可联系技术支持获取本地部署方案
-
-## 安全说明
-
-- 使用 HTTPS 加密传输
-- 密钥加密存储
-- 支持按接口进行权限控制
-
-## 需要帮助？
-
-- **技术支持**：https://minsubao.localhome.cn/
+- 凭证通过环境变量注入
+- 不提交真实 `APP_SECRET` 到仓库
+- 关键操作建议保留审核/确认流程
 
 ---
 
-**文档版本**：v1.0  
-**最后更新**：2026年
+## 技术支持
+
+- 技术支持: [https://minsubao.localhome.cn/](https://minsubao.localhome.cn/)
+
+---
+
+**文档版本**: v2.0  
+**最后更新**: 2026-04
