@@ -55,3 +55,6 @@ dist.zip
 # 仓库根目录仅保留 README.md，其余根级 *.md 不上传
 /*.md
 !/README.md
+
+# Local git backup folder
+.git_backup_*
