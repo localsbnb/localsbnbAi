@@ -1,0 +1,8 @@
+# 避免本地运行痕迹、日志、环境文件进入 npm 包（files 白名单仍会尊重此处排除）
+dist/logs/
+logs/
+**/*.log
+.env
+.env.*
+.env.local
+*.tgz

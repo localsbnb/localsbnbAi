@@ -1,0 +1,10 @@
+{
+  "LocalsBnb MCP": {
+    "command": "npx",
+    "args": ["--yes", "localsbnb-mcp-server"],
+    "env": {
+      "APP_SECRET": "<请填写你的 token>",
+      "APP_ID": "<请填写你的 campId>"
+    }
+  }
+}

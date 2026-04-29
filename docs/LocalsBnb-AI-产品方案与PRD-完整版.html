@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LocalsBnb AI 产品方案与 PRD（完整版）</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg: #faf9f7;
+      --paper: #fffefc;
+      --text: #1c1b19;
+      --text-muted: #5c5b59;
+      --accent: #0d6b5c;
+      --accent-light: #e8f2f1;
+      --border: #e5e3e0;
+      --table-header: #2d2c2a;
+      --shadow: rgba(0,0,0,.06);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Noto Sans SC', -apple-system, sans-serif;
+      font-size: 14px;
+      line-height: 1.65;
+      color: var(--text);
+      background: var(--bg);
+    }
+    .wrap { max-width: 920px; margin: 0 auto; padding: 2rem 1.5rem 3rem; background: var(--paper); box-shadow: 0 0 40px var(--shadow); }
+    h1, h2, h3, h4 { font-family: 'Noto Serif SC', serif; font-weight: 600; color: var(--text); margin-top: 1.8em; margin-bottom: 0.5em; }
+    h1 { font-size: 1.75rem; margin-top: 0; border-bottom: 2px solid var(--accent); padding-bottom: 0.35em; }
+    h2 { font-size: 1.28rem; color: var(--table-header); }
+    h3 { font-size: 1.05rem; }
+    h4 { font-size: 0.98rem; color: var(--text-muted); }
+    p { margin: 0.5em 0; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    ul, ol { margin: 0.5em 0; padding-left: 1.35em; }
+    li { margin: 0.2em 0; }
+    table { width: 100%; border-collapse: collapse; margin: 0.8em 0; font-size: 0.92em; }
+    th, td { border: 1px solid var(--border); padding: 0.45em 0.65em; text-align: left; vertical-align: top; }
+    th { background: var(--table-header); color: #fff; font-weight: 500; }
+    tr:nth-child(even) { background: var(--accent-light); }
+    .meta { font-size: 0.88em; color: var(--text-muted); margin-bottom: 1.5rem; }
+    nav.toc { background: var(--accent-light); border: 1px solid var(--border); padding: 1rem 1.2rem; margin: 1.2rem 0; border-radius: 6px; }
+    nav.toc h2 { margin-top: 0; font-size: 1.05rem; }
+    nav.toc ul { list-style: none; padding-left: 0; margin: 0.4em 0 0; }
+    nav.toc li { margin: 0.3em 0; }
+    nav.toc a { font-weight: 500; }
+    .mermaid-wrap { background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 1rem; margin: 1.25rem 0; overflow-x: auto; }
+    .mermaid { text-align: center; }
+    .caption { font-size: 0.85em; color: var(--text-muted); margin-top: 0.5em; text-align: center; }
+    blockquote { margin: 0.8em 0; padding: 0.5em 1em; border-left: 4px solid var(--accent); background: var(--accent-light); color: var(--text); }
+    .section-num { color: var(--accent); font-weight: 600; }
+    .req-table th { width: 22%; }
+    .card { border: 1px solid var(--border); border-radius: 6px; padding: 0.8em 1em; margin: 0.5em 0; background: #fff; }
+    .card-title { font-weight: 600; margin-bottom: 0.35em; }
+    pre, code { font-family: ui-monospace, monospace; font-size: 0.88em; background: #f5f4f3; padding: 0.2em 0.4em; border-radius: 4px; }
+    pre { padding: 0.75em 1em; overflow-x: auto; border: 1px solid var(--border); }
+    footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); font-size: 0.82em; color: var(--text-muted); }
+    @media print { body { background: #fff; } .wrap { box-shadow: none; max-width: 100%; } .card, .mermaid-wrap, table { break-inside: avoid; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>LocalsBnb AI 产品方案与 PRD（完整版）</h1>
+      <p class="meta">文档版本 v1.0 · 创建/更新 2025年 · 路客云 PMS AI 化能力出口 · 产品方案与需求文档合并</p>
+    </header>
+
+    <nav class="toc" aria-label="目录">
+      <h2>目录</h2>
+      <ul>
+        <li><a href="#doc-info">文档信息与修订记录</a></li>
+        <li><a href="#terms">一、术语与缩写</a></li>
+        <li><a href="#positioning">二、产品定位与目标用户</a></li>
+        <li><a href="#scope">三、范围与边界</a></li>
+        <li><a href="#competitors">四、竞对调研</a></li>
+        <li><a href="#flows">五、产品流程图</a></li>
+        <li><a href="#func-auth">六、功能需求详述 · 鉴权/待办/订单/经营/房态/房价/渠道</a></li>
+        <li><a href="#user-stories">七、用户故事（Given-When-Then）</a></li>
+        <li><a href="#solution">八、产品方案（能力、风控、商业模式）</a></li>
+        <li><a href="#architecture">九、技术架构与架构图</a></li>
+        <li><a href="#nfr">十、非功能需求</a></li>
+        <li><a href="#spec">十一、数据与接口规范</a></li>
+        <li><a href="#acceptance">十二、验收标准汇总</a></li>
+        <li><a href="#appendix">十三、附录</a></li>
+        <li><a href="#checklist">需求澄清检查清单</a></li>
+      </ul>
+    </nav>
+
+    <section id="doc-info">
+      <h2>文档信息</h2>
+      <table>
+        <tr><th>项目</th><th>说明</th></tr>
+        <tr><td>文档名称</td><td>LocalsBnb AI 产品方案与 PRD（完整版）</td></tr>
+        <tr><td>产品名称</td><td>LocalsBnb AI（路客云 PMS AI 化能力出口）</td></tr>
+        <tr><td>文档版本</td><td>v1.0</td></tr>
+        <tr><td>文档状态</td><td>初稿</td></tr>
+        <tr><td>关联文档</td><td>《01-项目计划文档》《02-技术架构设计文档》《03-产品方案文档》《03-工具定义规范》</td></tr>
+      </table>
+      <h3>修订记录</h3>
+      <table>
+        <tr><th>版本</th><th>日期</th><th>修订说明</th></tr>
+        <tr><td>v1.0</td><td>2025年</td><td>初稿，产品方案与 PRD 合并为完整版</td></tr>
+      </table>
+    </section>
+
+    <section id="terms">
+      <h2><span class="section-num">一、</span>术语与缩写</h2>
+      <table>
+        <tr><th>术语/缩写</th><th>全称或含义</th></tr>
+        <tr><td>PRD</td><td>Product Requirements Document，产品需求文档</td></tr>
+        <tr><td>MCP</td><td>Model Context Protocol，模型上下文协议</td></tr>
+        <tr><td>PMS</td><td>Property Management System，物业/酒店管理系统</td></tr>
+        <tr><td>SPMS</td><td>路客云酒店物业管理系统</td></tr>
+        <tr><td>campId</td><td>营地/物业 ID，标识一家店或经营主体</td></tr>
+        <tr><td>token</td><td>访问凭证，与 campId 绑定用于鉴权</td></tr>
+        <tr><td>storeId</td><td>店铺 ID（与 camp 对应关系以路客云实际数据模型为准）</td></tr>
+        <tr><td>Human-in-the-loop</td><td>人工在环，写操作前必须经用户明确确认</td></tr>
+        <tr><td>Scope</td><td>权限范围，如 orders:read、rooms:write</td></tr>
+        <tr><td>P0/P1/P2</td><td>功能优先级：P0 核心必做、P1 重要、P2 可选</td></tr>
+      </table>
+    </section>
+
+    <section id="positioning">
+      <h2><span class="section-num">二、</span>产品定位与目标用户</h2>
+      <h3>2.1 产品背景</h3>
+      <p>路客云是面向民宿/酒店经营者的多平台 PMS。LocalsBnb AI 将路客云核心能力封装为 MCP，解决「需登录系统才能查数据、办操作」的痛点，使店长、运营、老板等可在任意 AI 终端中通过自然语言完成查询与操作。</p>
+      <h3>2.2 产品定位</h3>
+      <p>LocalsBnb AI 是<strong>路客云 PMS 的 AI 化能力出口</strong>：通过 token + campId 完成初始化后，可在任何支持 MCP 的 AI 终端（如 Cursor、Claude Desktop、钉钉/飞书 Bot 等）中，以自然语言查询经营数据、待办事项，并在线完成入住/退房、发指引、开关房态、改价等操作。</p>
+      <h3>2.3 产品目标</h3>
+      <ul>
+        <li><strong>核心目标</strong>：在保证安全与合规的前提下，提供「查 + 办」的完整能力，一次配置、多端复用。</li>
+        <li><strong>业务目标</strong>：提升路客云用户粘性，形成可收费的增值能力（模式 B），为多系统统一 AI 入口打基础。</li>
+        <li><strong>体验目标</strong>：响应稳定、错误提示拟人化、写操作有明确确认步骤，数据输出脱敏。</li>
+      </ul>
+      <h3>2.4 目标用户与优先级</h3>
+      <table>
+        <tr><th>优先级</th><th>角色</th><th>典型场景</th><th>核心诉求</th></tr>
+        <tr><td>P0</td><td>店长</td><td>日常查房态、办入住退房、发密码与指引</td><td>高效、少登系统</td></tr>
+        <tr><td>P1</td><td>运营</td><td>查经营数据、多日报表、房态与房价</td><td>数据及时、可汇总</td></tr>
+        <tr><td>P2</td><td>老板</td><td>看经营概况、异常与待办，偶尔下发指令</td><td>一目了然、可授权</td></tr>
+        <tr><td>P2</td><td>开发者</td><td>集成到自建 Bot、自定义工作流</td><td>协议开放、可配置</td></tr>
+      </table>
+      <h3>2.5 功能优先级定义</h3>
+      <table>
+        <tr><th>优先级</th><th>含义</th><th>典型场景</th></tr>
+        <tr><td>P0</td><td>核心必做，MVP 必备</td><td>主流程、关键能力（鉴权、待办、入住退房、房态房价）</td></tr>
+        <tr><td>P1</td><td>重要，首版或紧接迭代</td><td>发指引/密码、多日经营数据、可售情况</td></tr>
+        <tr><td>P2</td><td>可选，后续规划</td><td>渠道查询、用户级模型配置</td></tr>
+      </table>
+    </section>
+
+    <section id="scope">
+      <h2><span class="section-num">三、</span>范围与边界</h2>
+      <h3>3.1 在范围内</h3>
+      <ul>
+        <li>基于 token + campId 的鉴权与初始化</li>
+        <li>待办（预抵/预离/在住）、订单查询与详情、经营数据（基础/多日）、房态、房价、可售情况等<strong>查询能力</strong></li>
+        <li>订单办理入住/退房、发送入住指引、发送密码；房态开/关；改房价等<strong>操作能力</strong>（均需 Human-in-the-loop）</li>
+        <li>数据脱敏、写操作确认流程、异常友好提示、分页与截断策略</li>
+        <li>模型接入与配置（国内 DeepSeek、海外 GPT）</li>
+      </ul>
+      <h3>3.2 不在范围内（本期）</h3>
+      <ul>
+        <li>路客云 PC/App 原有功能的改造（仅通过 MCP 暴露能力）</li>
+        <li>创建订单、取消订单等部分写操作（后续迭代）</li>
+        <li>多 camp 在同一会话内的切换交互</li>
+        <li>用户自带 API Key（模式 A）的完整产品化，本期以模式 B 为主</li>
+      </ul>
+    </section>
+
+    <section id="competitors">
+      <h2><span class="section-num">四、</span>竞对调研</h2>
+      <table>
+        <tr><th>维度</th><th>传统 PMS + 人工</th><th>部分 PMS 内嵌客服 Bot</th><th>LocalsBnb AI（MCP 形态）</th></tr>
+        <tr><td>入口</td><td>登录系统</td><td>仅限该产品内</td><td>任意 MCP 终端，一次配置多端复用</td></tr>
+        <tr><td>能力</td><td>完整功能</td><td>多为只读/简单问答</td><td>查 + 办（写操作需人工确认）</td></tr>
+        <tr><td>扩展性</td><td>依赖厂商</td><td>依赖厂商</td><td>协议开放，可接多 AI 客户端</td></tr>
+        <tr><td>数据归属</td><td>在 PMS</td><td>在 PMS</td><td>仍在路客云，MCP 仅转发与脱敏输出</td></tr>
+      </table>
+      <blockquote><strong>结论：</strong>MCP 形态的 PMS 在「多端复用、协议开放、数据仍归属路客云」上有差异化，适合作为路客云增值能力与未来多系统统一 AI 入口的基础。</blockquote>
+    </section>
+
+    <section id="flows">
+      <h2><span class="section-num">五、</span>产品流程图</h2>
+      <h3>5.1 初始化与使用流程</h3>
+      <ol>
+        <li>用户在路客云侧获取 <strong>token</strong> 与 <strong>campId</strong>（或由管理员分配）。</li>
+        <li>在 AI 客户端（如 Cursor/Claude）的 MCP 配置中填入该 MCP Server 地址及 token、campId。</li>
+        <li>用户通过自然语言发起请求；AI 调用 MCP 工具，MCP Server 用 token + campId 鉴权并调用路客云 API。</li>
+        <li>若为写操作：AI 先回复「将执行：XXX，是否确认？」→ 用户确认后再执行并返回结果。</li>
+      </ol>
+      <h3>5.2 系统总体流程（架构）</h3>
+      <div class="mermaid-wrap">
+        <div class="mermaid">
+flowchart TB
+    subgraph 用户与终端["用户与 AI 终端"]
+        U[店长/运营/老板]
+        C1[Claude Desktop]
+        C2[Cursor]
+        C3[钉钉/飞书 Bot]
+    end
+    subgraph MCP层["MCP 协议层"]
+        MCP[MCP Protocol]
+    end
+    subgraph LocalsBnb["LocalsBnb AI 服务"]
+        subgraph MCP_Server["MCP Server"]
+            AUTH[鉴权]
+            ROUTE[工具路由]
+            MASK[数据脱敏]
+            HITL[写操作确认]
+        end
+        subgraph AI_Gateway["AI 网关"]
+            ROUTER[模型路由]
+            DS[DeepSeek]
+            GPT[GPT]
+        end
+    end
+    subgraph 路客云["路客云 SPMS"]
+        API[REST API]
+    end
+    U --> C1 & C2 & C3
+    C1 & C2 & C3 --> MCP --> AUTH --> ROUTE
+    ROUTE --> MASK & HITL
+    ROUTE --> API
+    HITL --> API
+    ROUTER --> DS & GPT
+        </div>
+        <p class="caption">图 1：系统总体架构与数据流</p>
+      </div>
+      <h3>5.3 鉴权与数据流（时序）</h3>
+      <div class="mermaid-wrap">
+        <div class="mermaid">
+sequenceDiagram
+    participant U as 用户
+    participant AI as AI 客户端
+    participant MCP as MCP Server
+    participant API as 路客云 API
+    U->>AI: 自然语言请求
+    AI->>MCP: 调用工具(token, campId, params)
+    MCP->>MCP: 校验 token + campId
+    alt 鉴权失败
+        MCP-->>AI: 鉴权错误
+    else 鉴权成功
+        MCP->>API: REST 请求(带身份)
+        API-->>MCP: 原始数据
+        MCP->>MCP: 脱敏处理
+        MCP-->>AI: 脱敏后结果
+        AI-->>U: 自然语言回复
+    end
+        </div>
+        <p class="caption">图 2：鉴权与数据流时序图</p>
+      </div>
+      <h3>5.4 写操作 Human-in-the-loop 流程</h3>
+      <div class="mermaid-wrap">
+        <div class="mermaid">
+flowchart TD
+    A[用户: 帮我给 301 办入住] --> B[AI 调用 MCP: 办理入住]
+    B --> C[MCP 不执行, 返回待确认]
+    C --> D[AI 展示: 将执行「301 办理入住」, 是否确认?]
+    D --> E{用户确认?}
+    E -->|否| F[取消, 不调用写接口]
+    E -->|是| G[AI 再次调用 MCP: 确认执行]
+    G --> H[MCP 调用路客云写接口]
+    H --> I[返回执行结果]
+    I --> J[AI 回复用户]
+        </div>
+        <p class="caption">图 3：写操作人工确认流程</p>
+      </div>
+    </section>
+
+    <h2><span class="section-num">六、</span>功能需求详述</h2>
+
+    <section id="func-auth">
+      <h3>6.1 鉴权与初始化</h3>
+      <h4>6.1.1 初始化配置</h4>
+      <table class="req-table">
+        <tr><th>属性</th><th>说明</th></tr>
+        <tr><td>功能描述</td><td>用户或管理员在 AI 客户端配置 MCP 时，需提供 token 与 campId，用于标识身份与数据范围。</td></tr>
+        <tr><td>优先级</td><td>P0</td></tr>
+        <tr><td>输入</td><td><strong>token</strong>（必填）：路客云侧颁发的访问凭证。<br><strong>campId</strong>（必填）：营地/物业 ID，与 token 绑定。</td></tr>
+        <tr><td>业务规则</td><td>1. token 与 campId 必须成对有效，否则禁止调用任何工具。<br>2. 所有 MCP 请求必须携带该 token 与 campId。<br>3. 权限范围（scope）由路客云根据 token/camp 解析，MCP 层做转发与校验。</td></tr>
+        <tr><td>验收标准</td><td>1. 配置正确时，工具可正常调用路客云 API。<br>2. token 无效或与 campId 不匹配时，返回明确鉴权错误，不调用下游 API。<br>3. 文档与配置示例中明确说明 token、campId 的获取方式。</td></tr>
+      </table>
+      <h4>6.1.2 权限范围（Scope）</h4>
+      <table>
+        <tr><th>Scope</th><th>说明</th><th>涉及工具（示例）</th></tr>
+        <tr><td>orders:read</td><td>订单查询</td><td>query_orders, get_order_details, 待办类查询</td></tr>
+        <tr><td>orders:write</td><td>订单写操作</td><td>check_in_order, check_out_order, send_guide, send_password</td></tr>
+        <tr><td>rooms:read</td><td>房态/房价查询</td><td>query_room_status, query_room_prices, query_availability</td></tr>
+        <tr><td>rooms:write</td><td>房态/房价写操作</td><td>update_room_status, update_room_price, batch_update_prices</td></tr>
+        <tr><td>finance:read</td><td>经营/财务数据查询</td><td>query_operational_data, query_financial_data, analyze_revenue</td></tr>
+        <tr><td>channels:read</td><td>渠道查询</td><td>list_channels, get_channel_details</td></tr>
+        <tr><td>*</td><td>全部权限</td><td>仅管理员或特殊 token</td></tr>
+      </table>
+    </section>
+
+    <section id="func-todos">
+      <h3>6.2 待办事项（预抵 / 预离 / 在住）</h3>
+      <div class="card">
+        <div class="card-title">6.2.1 查询预抵订单</div>
+        <table class="req-table">
+          <tr><th>属性</th><th>说明</th></tr>
+          <tr><td>功能描述</td><td>查询指定日期范围内「待入住」的订单（预抵），支持分页。</td></tr>
+          <tr><td>优先级</td><td>P0</td></tr>
+          <tr><td>MCP 工具名</td><td>query_todos_pre_arrival 或复用 query_orders 且 status=pending + 入住日</td></tr>
+          <tr><td>输入</td><td>campId（必填）、storeId（必填）、date（必填，YYYY-MM-DD）、page（默认 1）、pageSize（默认 20，最大 100）</td></tr>
+          <tr><td>输出</td><td>订单列表：orderId、orderNo、guestName（脱敏）、phone（脱敏）、roomType、checkInDate、checkOutDate、status；total、page、pageSize</td></tr>
+          <tr><td>业务规则</td><td>仅返回入住日在查询范围内且状态为待入住；列表敏感字段须脱敏；强制分页，单页最多 100 条</td></tr>
+          <tr><td>验收标准</td><td>与路客云「预抵」视图一致；脱敏符合 十、5.2 节</td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-title">6.2.2 查询预离订单</div>
+        <table class="req-table">
+          <tr><th>属性</th><th>说明</th></tr>
+          <tr><td>功能描述</td><td>查询指定日期范围内「待退房」的订单（预离），支持分页。</td></tr>
+          <tr><td>优先级</td><td>P0</td></tr>
+          <tr><td>MCP 工具名</td><td>query_todos_pre_departure 或 query_orders 且 status=checked_in + 退房日</td></tr>
+          <tr><td>输入</td><td>campId/storeId、date（退房日）、page、pageSize</td></tr>
+          <tr><td>输出</td><td>同 6.2.1 结构，状态为在住、退房日在查询日</td></tr>
+          <tr><td>业务规则</td><td>退房日 = date 且 status=checked_in</td></tr>
+          <tr><td>验收标准</td><td>与路客云「预离」一致，脱敏生效</td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-title">6.2.3 查询在住订单</div>
+        <table class="req-table">
+          <tr><th>属性</th><th>说明</th></tr>
+          <tr><td>功能描述</td><td>查询当前在住订单列表，支持分页。</td></tr>
+          <tr><td>优先级</td><td>P0</td></tr>
+          <tr><td>MCP 工具名</td><td>query_todos_in_house 或 query_orders 且 status=checked_in</td></tr>
+          <tr><td>输入</td><td>campId/storeId、page、pageSize</td></tr>
+          <tr><td>输出</td><td>在住订单列表，字段同 6.2.1</td></tr>
+          <tr><td>业务规则</td><td>仅返回 status=checked_in</td></tr>
+          <tr><td>验收标准</td><td>与路客云「在住」一致，脱敏生效</td></tr>
+        </table>
+      </div>
+    </section>
+
+    <section id="func-orders">
+      <h3>6.3 订单查询</h3>
+      <div class="card">
+        <div class="card-title">6.3.1 查询订单列表（query_orders）</div>
+        <table class="req-table">
+          <tr><th>属性</th><th>说明</th></tr>
+          <tr><td>功能描述</td><td>按条件查询订单列表，支持日期范围、状态、分页等。</td></tr>
+          <tr><td>优先级</td><td>P0</td></tr>
+          <tr><td>输入</td><td>storeId（必填）、startDate、endDate（必填，YYYY-MM-DD）、status（可选：pending/checked_in/checked_out/cancelled）、roomType、guestName、phone、page（默认 1）、pageSize（默认 20，最大 100）</td></tr>
+          <tr><td>输出</td><td>list[]：orderId、orderNo、guestName、phone、roomType、checkInDate、checkOutDate、status、totalAmount、paidAmount；total、page、pageSize；敏感字段脱敏</td></tr>
+          <tr><td>业务规则</td><td>日期范围建议不超过 90 天；分页必选，最大 100/页</td></tr>
+          <tr><td>验收标准</td><td>与工具定义规范 2.1 一致，且脱敏</td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-title">6.3.2 获取订单详情（get_order_details）</div>
+        <table class="req-table">
+          <tr><th>属性</th><th>说明</th></tr>
+          <tr><td>功能描述</td><td>根据订单 ID 获取订单详细信息。</td></tr>
+          <tr><td>优先级</td><td>P0</td></tr>
+          <tr><td>输入</td><td>orderId（必填）</td></tr>
+          <tr><td>输出</td><td>订单完整信息：orderId、orderNo、guestName、phone、idCard、roomType、roomTypeName、checkInDate、checkOutDate、nights、status、totalAmount、paidAmount、deposit、arrears、channel、remark、createdAt、updatedAt 等；敏感字段脱敏</td></tr>
+          <tr><td>业务规则</td><td>仅能查询当前 token/campId 权限范围内的订单；订单不存在或无权限时返回明确错误</td></tr>
+          <tr><td>验收标准</td><td>与工具定义规范 2.2 一致，且脱敏</td></tr>
+        </table>
+      </div>
+
+      <h3>6.4 订单写操作（均需 Human-in-the-loop）</h3>
+      <div class="card">
+        <div class="card-title">6.4.1 办理入住（check_in_order）</div>
+        <table class="req-table">
+          <tr><th>属性</th><th>说明</th></tr>
+          <tr><td>功能描述</td><td>为指定订单办理入住。执行前必须经用户确认。</td></tr>
+          <tr><td>优先级</td><td>P0</td></tr>
+          <tr><td>输入</td><td>orderId（必填）、roomId（可选，若已排房）</td></tr>
+          <tr><td>确认流程</td><td>1. AI 首次调用时 MCP 返回「待确认」结构（操作描述、orderId）。2. 用户确认后 AI 再次调用并传入 confirm=true，MCP 才调用路客云写接口。3. 执行成功后返回订单新状态。</td></tr>
+          <tr><td>业务规则</td><td>订单状态必须为待入住；同一订单不可重复入住；操作需落审计日志（谁、何时、哪笔订单）</td></tr>
+          <tr><td>验收标准</td><td>未确认不执行；确认后执行结果与路客云一致；审计可查</td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-title">6.4.2 办理退房（check_out_order）</div>
+        <table class="req-table">
+          <tr><th>属性</th><th>说明</th></tr>
+          <tr><td>功能描述</td><td>为指定订单办理退房。执行前必须经用户确认。</td></tr>
+          <tr><td>优先级</td><td>P0</td></tr>
+          <tr><td>输入</td><td>orderId（必填）</td></tr>
+          <tr><td>确认流程</td><td>同 6.4.1</td></tr>
+          <tr><td>业务规则</td><td>订单状态必须为在住；不可重复退房；审计落库</td></tr>
+          <tr><td>验收标准</td><td>同 6.4.1</td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-title">6.4.3 发送入住指引（send_guide）</div>
+        <table class="req-table">
+          <tr><th>属性</th><th>说明</th></tr>
+          <tr><td>功能描述</td><td>向指定订单的客人发送入住指引（如短信/模板消息）。执行前必须经用户确认。</td></tr>
+          <tr><td>优先级</td><td>P1</td></tr>
+          <tr><td>输入</td><td>orderId（必填）；可选：templateId、渠道等（以路客云 API 为准）</td></tr>
+          <tr><td>确认流程</td><td>同 6.4.1</td></tr>
+          <tr><td>业务规则</td><td>依赖路客云现有「发入住指引」能力；若暂无独立接口可标注为后续迭代</td></tr>
+          <tr><td>验收标准</td><td>确认后发送成功，且可审计</td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-title">6.4.4 发送密码（send_password）</div>
+        <table class="req-table">
+          <tr><th>属性</th><th>说明</th></tr>
+          <tr><td>功能描述</td><td>向指定订单的客人发送门锁/房门密码。执行前必须经用户确认。</td></tr>
+          <tr><td>优先级</td><td>P1</td></tr>
+          <tr><td>输入</td><td>orderId（必填）；可选：渠道（以路客云 API 为准）</td></tr>
+          <tr><td>确认流程</td><td>同 6.4.1</td></tr>
+          <tr><td>业务规则</td><td>依赖路客云现有「发密码」能力</td></tr>
+          <tr><td>验收标准</td><td>确认后发送成功，且可审计</td></tr>
+        </table>
+      </div>
+    </section>
+
+    <section id="func-data">
+      <h3>6.5 经营数据查询</h3>
+      <div class="card">
+        <div class="card-title">6.5.1 查询经营数据（query_operational_data）</div>
+        <table class="req-table">
+          <tr><th>属性</th><th>说明</th></tr>
+          <tr><td>功能描述</td><td>查询指定日期范围内的经营统计：订单数、收入、入住率、RevPAR 等；支持按日明细。</td></tr>
+          <tr><td>优先级</td><td>P0</td></tr>
+          <tr><td>输入</td><td>storeId（必填）、startDate、endDate（必填）、type（可选，如 accommodation/voucher，默认 accommodation）</td></tr>
+          <tr><td>输出</td><td>totalOrders、totalRevenue、averagePrice、occupancyRate、revpar；dailyData[]：date、orders、revenue、occupancyRate</td></tr>
+          <tr><td>业务规则</td><td>日期范围建议不超过 90 天；dailyData 条数可做上限（如最多 31 天），防止 Context 溢出</td></tr>
+          <tr><td>验收标准</td><td>与工具定义规范 4.1 一致，且无敏感信息</td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-title">6.5.2 多日经营数据与汇总</div>
+        <p>强调「多日」场景；可提供「最近 7 天/30 天」快捷参数。汇总优先返回；明细按需分页或截断。优先级 P1。</p>
+      </div>
+
+      <h3>6.6 房态查询与写操作</h3>
+      <div class="card">
+        <div class="card-title">6.6.1 查询房态（query_room_status）</div>
+        <table class="req-table">
+          <tr><th>属性</th><th>说明</th></tr>
+          <tr><td>功能描述</td><td>查询指定日期范围内的房态视图（房间维度 + 订单占用）。</td></tr>
+          <tr><td>优先级</td><td>P0</td></tr>
+          <tr><td>输入</td><td>storeId（必填）、startDate、endDate（必填）、roomTypeId（可选）</td></tr>
+          <tr><td>输出</td><td>roomTypes[]：roomTypeId、roomTypeName、rooms[]：roomId、roomName、status（available/occupied/dirty/maintenance）、orders[]（简要）</td></tr>
+          <tr><td>业务规则</td><td>日期范围建议不超过 31 天；房间/订单数量大时可分页或仅返回房型级汇总</td></tr>
+          <tr><td>验收标准</td><td>与工具定义规范 3.1 一致</td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-title">6.6.2 开房态 / 关房态（update_room_status）</div>
+        <table class="req-table">
+          <tr><th>属性</th><th>说明</th></tr>
+          <tr><td>功能描述</td><td>对指定房源在指定日期进行「开房态」或「关房态」（可售/不可售）。执行前必须经用户确认。</td></tr>
+          <tr><td>优先级</td><td>P0</td></tr>
+          <tr><td>输入</td><td>storeId（必填）、roomTypeId 或 roomId（必填）、date（必填）、status（必填，如 open/close 或 available/unavailable）</td></tr>
+          <tr><td>确认流程</td><td>同 6.4.1</td></tr>
+          <tr><td>业务规则</td><td>依赖路客云房态更新接口；审计落库</td></tr>
+          <tr><td>验收标准</td><td>确认后房态变更与路客云一致</td></tr>
+        </table>
+      </div>
+
+      <h3>6.7 房价查询与写操作</h3>
+      <div class="card">
+        <div class="card-title">6.7.1 查询房价（query_room_prices）</div>
+        <table class="req-table">
+          <tr><th>属性</th><th>说明</th></tr>
+          <tr><td>功能描述</td><td>查询指定日期范围内各房型价格及可售数量。</td></tr>
+          <tr><td>优先级</td><td>P0</td></tr>
+          <tr><td>输入</td><td>storeId、startDate、endDate、roomTypeId（可选）</td></tr>
+          <tr><td>输出</td><td>prices[]：date、roomTypeId、roomTypeName、price、available</td></tr>
+          <tr><td>业务规则</td><td>日期范围建议不超过 31 天；条数过多时做截断或分页</td></tr>
+          <tr><td>验收标准</td><td>与工具定义规范 3.2 一致</td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-title">6.7.2 查询可售情况（query_availability）</div>
+        <p>可合并到 query_room_prices 的 available 字段，或独立接口。优先级 P1。</p>
+      </div>
+      <div class="card">
+        <div class="card-title">6.7.3 改房价（update_room_price / batch_update_prices）</div>
+        <table class="req-table">
+          <tr><th>属性</th><th>说明</th></tr>
+          <tr><td>功能描述</td><td>更新单个或批量房型在指定日期的价格。执行前必须经用户确认。</td></tr>
+          <tr><td>优先级</td><td>P0</td></tr>
+          <tr><td>输入</td><td>单条：storeId、roomTypeId、date、price。批量：storeId、updates[]：roomTypeId、date、price</td></tr>
+          <tr><td>确认流程</td><td>同 6.4.1；批量时需在待确认中列出将改动的条目摘要</td></tr>
+          <tr><td>业务规则</td><td>价格需符合路客云规则（如非负、精度）；审计落库</td></tr>
+          <tr><td>验收标准</td><td>与工具定义规范 3.3、3.4 一致，且确认后生效</td></tr>
+        </table>
+      </div>
+
+      <h3>6.8 渠道查询（可选）</h3>
+      <div class="card">
+        <div class="card-title">6.8.1 list_channels / get_channel_details</div>
+        <p>获取店铺关联的渠道列表及渠道详情。优先级 P2。输入/输出与《03-工具定义规范》渠道管理工具集一致。验收：只读，有敏感数据则按 十、5.2 脱敏。</p>
+      </div>
+    </section>
+
+    <section id="user-stories">
+      <h2><span class="section-num">七、</span>用户故事（Given-When-Then）</h2>
+      <p>按 product-manager-skills 用户故事格式：<strong>作为 [角色]，我希望 [能力/动作]，以便 [价值/目标]</strong>。验收条件采用 Given-When-Then。</p>
+      <div class="card">
+        <div class="card-title">US-1：店长查今日预抵并办入住</div>
+        <p><strong>作为</strong>店长，<strong>我希望</strong>通过自然语言查询今日预抵订单并办理入住，<strong>以便</strong>少登系统、提高效率。</p>
+        <table>
+          <tr><th>Given</th><td>已配置 token + campId，MCP 已连接</td></tr>
+          <tr><th>When</th><td>用户说「帮我查今天要入住的订单」→ AI 调用待办工具 → 用户选择订单并说「给这个订单办入住」→ AI 展示待确认 → 用户确认</td></tr>
+          <tr><th>Then</th><td>返回今日预抵列表（脱敏）；确认后入住成功，订单状态变为在住，审计可查</td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-title">US-2：运营查近 7 天经营数据</div>
+        <p><strong>作为</strong>运营，<strong>我希望</strong>查询近 7 天经营汇总与每日明细，<strong>以便</strong>快速掌握经营情况。</p>
+        <table>
+          <tr><th>Given</th><td>已配置 token + campId</td></tr>
+          <tr><th>When</th><td>用户说「查一下最近 7 天的经营数据」→ AI 调用经营数据工具</td></tr>
+          <tr><th>Then</th><td>返回 totalOrders、totalRevenue、occupancyRate 等汇总；dailyData 含每日明细（最多 31 天截断）；无敏感信息</td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-title">US-3：老板关某房型明日房态</div>
+        <p><strong>作为</strong>老板，<strong>我希望</strong>关闭某房型明日可售状态，<strong>以便</strong>临时控房。</p>
+        <table>
+          <tr><th>Given</th><td>已配置 token + campId，有 rooms:write 权限</td></tr>
+          <tr><th>When</th><td>用户说「把 301 房型明天关房态」→ AI 调用 update_room_status → 返回待确认 → 用户确认</td></tr>
+          <tr><th>Then</th><td>确认后房态变更成功，审计可查</td></tr>
+        </table>
+      </div>
+    </section>
+
+    <section id="solution">
+      <h2><span class="section-num">八、</span>产品方案（能力、风控、商业模式）</h2>
+      <h3>8.1 核心能力范围</h3>
+      <p><strong>查询能力：</strong>当前待办（预抵/预离/在住）、订单详情、基础/多日经营数据、当前房态、当前房价、当前可售。</p>
+      <p><strong>操作能力（均需 Human-in-the-loop）：</strong>订单办理入住/退房、发送入住指引、发送密码；开房态、关房态；改房价。</p>
+      <h3>8.2 约束与风控</h3>
+      <ul>
+        <li><strong>数据脱敏：</strong>对外输出中姓名、手机号、证件号必须脱敏（MCP/网关层统一处理）。</li>
+        <li><strong>写操作：</strong>所有写操作执行前必须经用户明确确认（Human-in-the-loop）。</li>
+        <li><strong>异常与容错：</strong>超时/限流等场景返回拟人化、可操作的提示语（如「老板，网络有点开小差，稍等一分钟再试」）。</li>
+        <li><strong>接口设计：</strong>分页、截断与摘要优先，避免单次请求打爆 Context 或超时。</li>
+      </ul>
+      <h3>8.3 商业模式（以模式 B 为主）</h3>
+      <p><strong>模式 B：</strong>路客云统一封装大模型，按次/按月向用户收费（SaaS 思维，体验好）。国内优先接入 DeepSeek，海外优先 GPT；模型由路客云侧配置与路由，用户无需自备 API Key。</p>
+      <p><strong>模式 A（可选）：</strong>用户自带大模型 API Key，适合开发者或高用量客户，作为高级选项。</p>
+      <h3>8.4 模型接入与配置</h3>
+      <ul>
+        <li><strong>环境/地域：</strong>国内默认 DeepSeek，海外默认 GPT；API Key 由路客云统一管理。</li>
+        <li><strong>营地级：</strong>可为单个 camp 指定模型（如强制 GPT-4），或「自动」沿用地域默认。</li>
+        <li><strong>用户级：</strong>可选，仅在对开发者或高级用户开放时使用。</li>
+      </ul>
+      <div class="mermaid-wrap">
+        <div class="mermaid">
+flowchart LR
+    subgraph 请求["请求"]
+        REQ[对话请求 campId]
+    end
+    subgraph 配置层["配置层"]
+        ENV[环境/地域]
+        CAMP[营地配置]
+        USER[用户配置]
+    end
+    subgraph 解析["模型解析"]
+        RESOLVE[解析当前模型]
+        KEY[model_key]
+    end
+    subgraph 执行["执行"]
+        GW[AI 网关]
+        D[DeepSeek]
+        G[OpenAI]
+    end
+    REQ --> RESOLVE
+    USER --> RESOLVE
+    CAMP --> RESOLVE
+    ENV --> RESOLVE
+    RESOLVE --> KEY --> GW
+    GW --> D & G
+        </div>
+        <p class="caption">图 4：模型接入与配置架构</p>
+      </div>
+    </section>
+
+    <section id="architecture">
+      <h2><span class="section-num">九、</span>技术架构与架构图</h2>
+      <h3>9.1 总体架构</h3>
+      <p>用户 → AI 客户端（Claude/Cursor/Bot）→ MCP 协议 → LocalsBnb AI MCP Server（鉴权、工具路由、脱敏、写操作确认）→ 路客云 REST API。模式 B 下由路客云侧 AI 网关按地域/营地选择模型（DeepSeek/GPT）并调用大模型 API。</p>
+      <h3>9.2 鉴权与身份</h3>
+      <p>初始化参数：token + campId。请求进入 MCP Server 后校验 token 有效性及与 campId 的绑定，解析出当前营地（及可选用户身份），后续所有 API 调用均带该身份；权限继承路客云现有体系。</p>
+      <h3>9.3 部署与边界</h3>
+      <div class="mermaid-wrap">
+        <div class="mermaid">
+flowchart TB
+    subgraph 客户端["用户侧"]
+        A[AI 应用]
+    end
+    subgraph 路客云侧["路客云侧（模式 B）"]
+        MCP_SVC[MCP Server]
+        GW_SVC[AI 网关]
+        KEY_STORE[密钥/配置存储]
+        LK_API[路客云 REST API]
+    end
+    A -->|MCP / HTTPS| MCP_SVC
+    MCP_SVC --> KEY_STORE
+    MCP_SVC --> LK_API
+    MCP_SVC -.->|需调用大模型时| GW_SVC
+    GW_SVC --> KEY_STORE
+        </div>
+        <p class="caption">图 5：部署与系统边界</p>
+      </div>
+    </section>
+
+    <section id="nfr">
+      <h2><span class="section-num">十、</span>非功能需求</h2>
+      <h3>10.1 性能与可用性</h3>
+      <table>
+        <tr><th>需求项</th><th>说明</th></tr>
+        <tr><td>响应时间</td><td>单次工具调用（不含大模型推理）P95 ≤ 5s；路客云 API 超时建议 10–15s，超时后进入 10.4 异常话术。</td></tr>
+        <tr><td>可用性</td><td>依赖路客云 API 与 MCP Server 部署可用性；目标与路客云 SLA 对齐。</td></tr>
+        <tr><td>分页与截断</td><td>所有列表类接口强制分页，pageSize 最大 100；经营数据 dailyData 等可限制条数（如 31）；单条详情与汇总文本长度可设上限，避免 AI Context 溢出。</td></tr>
+      </table>
+      <h3>10.2 数据脱敏与隐私</h3>
+      <table>
+        <tr><th>需求项</th><th>说明</th></tr>
+        <tr><td>脱敏范围</td><td>所有返回给 AI 客户端的数据中，<strong>姓名、手机号、证件号</strong>必须脱敏。</td></tr>
+        <tr><td>脱敏规则</td><td><strong>姓名</strong>：保留姓，其余用 *（如「张**」）。<strong>手机号</strong>：保留前 3 后 4（如 138****1234）。<strong>证件号</strong>：仅保留后 4 位或全部 *（可配置）。</td></tr>
+        <tr><td>实施位置</td><td>在 MCP Server 或统一网关层，在返回给 AI 之前对结构化结果与文本做脱敏。</td></tr>
+        <tr><td>合规</td><td>符合最小必要原则；若后续有「申请查看明文」流程，需单独设计权限与审计。</td></tr>
+      </table>
+      <h3>10.3 写操作与 Human-in-the-loop</h3>
+      <table>
+        <tr><th>需求项</th><th>说明</th></tr>
+        <tr><td>适用操作</td><td>办理入住、办理退房、发送入住指引、发送密码、开/关房态、改房价（含批量）。</td></tr>
+        <tr><td>流程</td><td>1）用户表达意图 → 2）AI 调用 MCP 工具 → 3）MCP 返回「待确认」结构 → 4）AI 向用户展示并询问确认 → 5）用户确认后 AI 再次调用并带确认标识 → 6）MCP 调用路客云写接口 → 7）返回执行结果。</td></tr>
+        <tr><td>确认方式</td><td>支持自然语言确认（如「确认」「执行」）或客户端按钮；MCP 层通过参数（如 confirm=true）区分「仅预览」与「确认执行」。</td></tr>
+        <tr><td>审计</td><td>谁、何时、对哪笔订单/哪间房/哪日房价执行了何操作，在路客云侧落库并可查。</td></tr>
+      </table>
+      <h3>10.4 异常处理与友好提示</h3>
+      <table>
+        <tr><th>场景</th><th>返回策略</th></tr>
+        <tr><td>鉴权失败</td><td>明确提示「未授权」或「token/营地无效」，不暴露内部信息。</td></tr>
+        <tr><td>路客云 API 超时</td><td>拟人化话术，如：「老板，现在的网络有点开小差，我没能拿到最新的房态，您稍等一分钟我再试。」</td></tr>
+        <tr><td>限流</td><td>「请求有点多，稍等再试。」</td></tr>
+        <tr><td>部分失败</td><td>「已拿到 XX，但 YY 暂时没拿到，您可以先看 XX。」</td></tr>
+        <tr><td>参数错误</td><td>明确说明缺少或错误的参数，便于用户或 AI 修正。</td></tr>
+      </table>
+      <h3>10.5 模型接入与配置（模式 B）</h3>
+      <table>
+        <tr><th>需求项</th><th>说明</th></tr>
+        <tr><td>默认策略</td><td>国内部署默认 DeepSeek，海外默认 GPT；API Key 由路客云统一管理。</td></tr>
+        <tr><td>营地级</td><td>可为单个 camp 指定模型（如 GPT-4o）或「自动」沿用地域默认。</td></tr>
+        <tr><td>用户级</td><td>可选，仅在对开发者/高级用户开放时提供。</td></tr>
+        <tr><td>扩展</td><td>新增模型时通过配置与适配器扩展，不改业务代码。</td></tr>
+      </table>
+    </section>
+
+    <section id="spec">
+      <h2><span class="section-num">十一、</span>数据与接口规范</h2>
+      <h3>11.1 分页规范</h3>
+      <table>
+        <tr><th>参数</th><th>类型</th><th>默认值</th><th>最大值</th><th>说明</th></tr>
+        <tr><td>page</td><td>number</td><td>1</td><td>—</td><td>页码，从 1 开始</td></tr>
+        <tr><td>pageSize</td><td>number</td><td>20</td><td>100</td><td>每页条数</td></tr>
+      </table>
+      <p>所有列表类响应包含：list、total、page、pageSize。</p>
+      <h3>11.2 日期规范</h3>
+      <ul>
+        <li>格式：YYYY-MM-DD。</li>
+        <li>订单/经营单次查询建议不超过 90 天；房态/房价建议不超过 31 天；超出时可拒绝或截断并提示。</li>
+      </ul>
+      <h3>11.3 统一错误响应结构</h3>
+      <pre>{
+  "code": "非 0 错误码",
+  "message": "用户或 AI 可读的提示",
+  "friendlyMessage": "可选，拟人化话术，用于直接回复用户"
+}</pre>
+      <h3>11.4 写操作「待确认」响应结构</h3>
+      <pre>{
+  "requireConfirmation": true,
+  "action": "check_in_order",
+  "summary": "为订单 12345 办理入住",
+  "params": { "orderId": "12345" },
+  "message": "请确认是否执行上述操作。"
+}</pre>
+      <p>用户确认后，AI 再次调用时传入上述 params 并增加 <code>confirm: true</code>，MCP 再执行写接口。</p>
+    </section>
+
+    <section id="acceptance">
+      <h2><span class="section-num">十二、</span>验收标准汇总</h2>
+      <h3>12.1 按模块</h3>
+      <table>
+        <tr><th>模块</th><th>验收要点</th></tr>
+        <tr><td>鉴权与初始化</td><td>token+campId 正确可调通；错误时返回明确鉴权失败且不调下游。</td></tr>
+        <tr><td>待办</td><td>预抵/预离/在住三类查询结果正确、分页与脱敏生效。</td></tr>
+        <tr><td>订单查询</td><td>列表与详情与路客云一致，脱敏生效，分页有效。</td></tr>
+        <tr><td>订单写操作</td><td>入住/退房/发指引/发密码均需确认后执行，审计可查。</td></tr>
+        <tr><td>经营数据</td><td>汇总与多日数据正确，截断策略生效。</td></tr>
+        <tr><td>房态</td><td>查询正确；开/关房态需确认后执行，审计可查。</td></tr>
+        <tr><td>房价</td><td>查询与可售正确；改价需确认后执行，审计可查。</td></tr>
+        <tr><td>异常</td><td>超时/限流等返回友好话术，符合 10.4。</td></tr>
+        <tr><td>模型配置</td><td>地域/营地配置生效，国内 DeepSeek、海外 GPT 可切换。</td></tr>
+      </table>
+      <h3>12.2 端到端场景</h3>
+      <ol>
+        <li><strong>店长查今日预抵并办入住</strong>：查询今日预抵 → 选择订单 → 办理入住 → 确认 → 执行成功并提示。</li>
+        <li><strong>运营查近 7 天经营数据</strong>：输入 7 天范围 → 返回汇总与每日明细（或截断提示）→ 无敏感信息。</li>
+        <li><strong>老板关某房型明日房态</strong>：请求关房态 → 返回待确认 → 确认 → 执行成功并提示。</li>
+      </ol>
+    </section>
+
+    <section id="appendix">
+      <h2><span class="section-num">十三、</span>附录</h2>
+      <h3>附录 A：错误码</h3>
+      <table>
+        <tr><th>错误码</th><th>说明</th><th>友好话术建议</th></tr>
+        <tr><td>AUTH_REQUIRED</td><td>未提供 token/campId</td><td>请先配置 token 与营地信息。</td></tr>
+        <tr><td>AUTH_INVALID</td><td>token 或 campId 无效</td><td>当前登录已失效，请重新配置。</td></tr>
+        <tr><td>PERMISSION_DENIED</td><td>无该操作权限</td><td>您没有执行该操作的权限。</td></tr>
+        <tr><td>INVALID_PARAMS</td><td>参数错误</td><td>请检查输入条件后重试。</td></tr>
+        <tr><td>API_ERROR</td><td>路客云 API 业务错误</td><td>根据 API 消息或使用「操作失败，请稍后重试」。</td></tr>
+        <tr><td>API_TIMEOUT</td><td>路客云 API 超时</td><td>老板，网络有点开小差，稍等一分钟再试。</td></tr>
+        <tr><td>API_RATE_LIMIT</td><td>请求过于频繁</td><td>请求有点多，稍等再试。</td></tr>
+        <tr><td>INTERNAL_ERROR</td><td>服务内部错误</td><td>系统暂时有点忙，请稍后再试。</td></tr>
+      </table>
+      <h3>附录 B：异常话术模板（示例）</h3>
+      <table>
+        <tr><th>场景</th><th>话术模板</th></tr>
+        <tr><td>超时</td><td>老板，现在的网络有点开小差，我没能拿到最新的 [房态/订单/数据]，您稍等一分钟我再试。</td></tr>
+        <tr><td>限流</td><td>请求有点多，稍等再试。</td></tr>
+        <tr><td>部分失败</td><td>已拿到 [XX]，但 [YY] 暂时没拿到，您可以先看 [XX]。</td></tr>
+        <tr><td>无数据</td><td>当前没有符合条件的 [预抵/预离/订单/数据]。</td></tr>
+      </table>
+      <h3>附录 C：写操作清单与确认参数约定</h3>
+      <table>
+        <tr><th>工具/操作</th><th>确认前返回字段示例</th><th>确认时传入</th></tr>
+        <tr><td>check_in_order</td><td>action, summary, params: { orderId }</td><td>params + confirm: true</td></tr>
+        <tr><td>check_out_order</td><td>同上</td><td>同上</td></tr>
+        <tr><td>send_guide</td><td>action, summary, params: { orderId }</td><td>同上</td></tr>
+        <tr><td>send_password</td><td>同上</td><td>同上</td></tr>
+        <tr><td>update_room_status</td><td>action, summary, params: { storeId, roomTypeId, date, status }</td><td>同上</td></tr>
+        <tr><td>update_room_price</td><td>action, summary, params: { storeId, roomTypeId, date, price }</td><td>同上</td></tr>
+        <tr><td>batch_update_prices</td><td>action, summary, params: { storeId, updates[] }</td><td>同上</td></tr>
+      </table>
+      <h3>附录 D：与路客云 API 的映射说明</h3>
+      <ul>
+        <li>具体 URL、请求方法、参数名以路客云 REST API 文档为准。</li>
+        <li>MCP 工具层负责：token/campId 映射为路客云鉴权头、参数名驼峰/下划线转换、响应脱敏、待确认包装。</li>
+        <li>若路客云暂无「发送入住指引」「发送密码」独立接口，可在开发时对接现有能力或后续迭代实现。</li>
+      </ul>
+    </section>
+
+    <section id="checklist">
+      <h2>需求澄清检查清单</h2>
+      <p>在进入方案设计前，按 product-manager-skills 规范确认以下项：</p>
+      <table>
+        <tr><th style="width:8%;">状态</th><th>检查项</th><th>本方案对应</th></tr>
+        <tr><td>☑</td><td>核心功能点是否明确</td><td>六、功能需求详述；八、核心能力范围</td></tr>
+        <tr><td>☑</td><td>目标用户与典型场景是否清晰</td><td>二、2.4 目标用户与优先级；七、用户故事</td></tr>
+        <tr><td>☑</td><td>业务规则与边界是否定义</td><td>三、范围与边界；八、约束与风控</td></tr>
+        <tr><td>☑</td><td>优先级（P0/P1/P2）是否排序</td><td>二、2.5 功能优先级定义；六、各功能优先级</td></tr>
+        <tr><td>☑</td><td>验收标准是否可执行</td><td>六、各功能验收标准；七、Given-When-Then；十二、验收标准汇总</td></tr>
+      </table>
+    </section>
+
+    <footer>
+      <p>本文档为产品方案与 PRD 合并完整版，与《01-项目计划文档》《02-技术架构设计文档》《03-产品方案文档》《03-工具定义规范》互为补充。</p>
+      <p>LocalsBnb AI · 路客云 PMS AI 化能力出口 · 文档版本 v1.0 · 2025年</p>
+    </footer>
+  </div>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'neutral',
+      securityLevel: 'loose',
+      flowchart: { useMaxWidth: true, htmlLabels: true },
+      sequence: { useMaxWidth: true }
+    });
+  </script>
+</body>
+</html>
