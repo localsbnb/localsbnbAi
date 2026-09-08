@@ -1,5 +1,5 @@
 /**
- * 发布/构建前清理 dist，避免旧产物（含误生成的 logs）被打进 npm 包。
+ * Clean dist before publish/build so stale artifacts (including accidental logs) are not bundled into the npm package.
  */
 const fs = require('fs');
 const path = require('path');

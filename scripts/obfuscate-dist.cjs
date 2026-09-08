@@ -1,5 +1,5 @@
 /**
- * 对 dist 目录下所有 .js / .mjs 进行混淆，用于生产打包（不修改文件名与导入路径）
+ * Obfuscate all .js / .mjs files under dist for production builds (filenames and import paths are unchanged).
  */
 const JavaScriptObfuscator = require('javascript-obfuscator');
 const fs = require('fs');

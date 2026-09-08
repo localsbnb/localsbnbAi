@@ -2,13 +2,15 @@ import type { ToolDefinition } from '../types/mcp.js';
 import * as roomHandlers from '../tools/rooms/index.js';
 import * as orderHandlers from '../tools/orders/index.js';
 import * as financeHandlers from '../tools/finance/index.js';
+import { getOverseasToolDescription, type RegionProfile } from '../region/index.js';
+import * as overseasWrites from '../tools/overseas/writes.js';
+import { handleToolError } from '../utils/errorHandler.js';
 
 /**
- * 所有工具定义配置
- * 目前只包含已实现的工具
+ * Tool definitions (implemented tools only).
  */
 export const toolDefinitions: ToolDefinition[] = [
-  // 房态查询工具（仅读）
+  // Room status tools (read-only)
   {
     name: 'query_room_status_new',
     description:
@@ -124,7 +126,7 @@ export const toolDefinitions: ToolDefinition[] = [
     handler: roomHandlers.queryRoomPricesHandler,
     requiredScopes: ['rooms:read'],
   },
-  // 订单管理工具（仅读）
+  // Order tools (read-only)
   {
     name: 'query_today_orders',
     description:
@@ -341,3 +343,139 @@ export const toolDefinitions: ToolDefinition[] = [
     requiredScopes: ['finance:read'],
   },
 ];
+
+function overseasWriteTools(profile: RegionProfile): ToolDefinition[] {
+  const locale = profile.locale;
+  return [
+    {
+      name: 'check_in_order',
+      description: getOverseasToolDescription('check_in_order', locale) || 'Check in a stay',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          orderDetailIds: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Stay detail IDs to check in',
+          },
+          orderId: { type: 'string', description: 'Optional parent order ID for preview' },
+          confirm: {
+            type: 'boolean',
+            description:
+              'Execute only after the human confirms this exact booking (guest + dates). Omit to preview. Never true on the first lookup.',
+          },
+        },
+        required: ['orderDetailIds'],
+      },
+      handler: async (args, context) => {
+        try {
+          context.permissionChecker.checkPermission('check_in_order', ['orders:write']);
+          return await overseasWrites.checkInOrderOverseas(args, context);
+        } catch (error) {
+          return handleToolError(error, context);
+        }
+      },
+      requiredScopes: ['orders:write'],
+    },
+    {
+      name: 'check_out_order',
+      description: getOverseasToolDescription('check_out_order', locale) || 'Check out a stay',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          orderDetailIds: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Stay detail IDs to check out',
+          },
+          orderId: { type: 'string', description: 'Optional parent order ID for preview' },
+          confirm: {
+            type: 'boolean',
+            description:
+              'Execute only after the human confirms this exact booking (guest + dates). Omit to preview. Never true on the first lookup.',
+          },
+        },
+        required: ['orderDetailIds'],
+      },
+      handler: async (args, context) => {
+        try {
+          context.permissionChecker.checkPermission('check_out_order', ['orders:write']);
+          return await overseasWrites.checkOutOrderOverseas(args, context);
+        } catch (error) {
+          return handleToolError(error, context);
+        }
+      },
+      requiredScopes: ['orders:write'],
+    },
+    {
+      name: 'extend_order',
+      description: getOverseasToolDescription('extend_order', locale) || 'Extend a stay',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          previousOrderId: { type: 'string', description: 'Current order ID to extend' },
+          nights: { type: 'number', minimum: 1, description: 'Nights to add (>=1)' },
+          roomId: { type: 'string', description: 'Room ID for the extension' },
+          paid: { type: 'number', description: 'Optional amount already paid, in fen' },
+          calcPayout: {
+            type: 'boolean',
+            description: 'If true, or if paid is omitted, preview calls /bnbOrder/calcPayout. Set false to skip quoting.',
+          },
+          confirm: {
+            type: 'boolean',
+            description:
+              'Execute only after the human confirms this exact booking (guest + dates). Omit to preview. Never true on the first lookup.',
+          },
+        },
+        required: ['previousOrderId', 'nights', 'roomId'],
+      },
+      handler: async (args, context) => {
+        try {
+          context.permissionChecker.checkPermission('extend_order', ['orders:write']);
+          return await overseasWrites.extendOrderOverseas(args, context);
+        } catch (error) {
+          return handleToolError(error, context);
+        }
+      },
+      requiredScopes: ['orders:write'],
+    },
+    {
+      name: 'arrange_room',
+      description: getOverseasToolDescription('arrange_room', locale) || 'Assign or change room',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          orderDetailId: { type: 'string', description: 'Stay detail ID' },
+          roomId: { type: 'string', description: 'Target room ID' },
+          orderId: { type: 'string', description: 'Optional parent order ID for preview' },
+          confirm: {
+            type: 'boolean',
+            description:
+              'Execute only after the human confirms this exact booking (guest + dates). Omit to preview. Never true on the first lookup.',
+          },
+        },
+        required: ['orderDetailId', 'roomId'],
+      },
+      handler: async (args, context) => {
+        try {
+          context.permissionChecker.checkPermission('arrange_room', ['orders:write']);
+          return await overseasWrites.arrangeRoomOverseas(args, context);
+        } catch (error) {
+          return handleToolError(error, context);
+        }
+      },
+      requiredScopes: ['orders:write'],
+    },
+  ];
+}
+
+export function getActiveToolDefinitions(profile: RegionProfile): ToolDefinition[] {
+  if (profile.region !== 'overseas') {
+    return toolDefinitions;
+  }
+  const localized = toolDefinitions.map((tool) => {
+    const description = getOverseasToolDescription(tool.name, profile.locale);
+    return description ? { ...tool, description } : tool;
+  });
+  return [...localized, ...overseasWriteTools(profile)];
+}

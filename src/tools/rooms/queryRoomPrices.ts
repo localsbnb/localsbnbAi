@@ -1,5 +1,7 @@
 import type { ToolHandler } from '../../types/mcp.js';
-import { assertApiSuccess, handleError, createSuccessResult } from '../../utils/errorHandler.js';
+import { assertApiSuccess, handleToolError, createSuccessResult } from '../../utils/errorHandler.js';
+import { isOverseas } from '../../region/index.js';
+import { queryRoomPricesOverseas } from '../overseas/prices.js';
 import { resolveDateAndDaysForNaturalWeek } from '../../utils/shanghaiDate.js';
 import { z } from 'zod';
 
@@ -95,6 +97,9 @@ export const queryRoomPricesHandler: ToolHandler = async (args, context) => {
 
     // 权限检查
     permissionChecker.checkPermission('query_room_prices', ['rooms:read']);
+    if (isOverseas(context)) {
+      return queryRoomPricesOverseas(args, context);
+    }
 
     // 参数验证
     const validatedParams = queryRoomPricesSchema.parse(args);
@@ -158,6 +163,6 @@ export const queryRoomPricesHandler: ToolHandler = async (args, context) => {
       timeRange: validatedParams.timeRange,
     });
   } catch (error) {
-    return handleError(error);
+    return handleToolError(error, context);
   }
 };

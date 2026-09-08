@@ -1,3 +1,3 @@
 #!/usr/bin/env sh
-# 用 sh 直接 exec node start.mjs，避免 Cursor 侧用 CJS 加载导致 ERR_REQUIRE_ESM
+# exec node start.mjs directly via sh to avoid ERR_REQUIRE_ESM when Cursor loads this as CJS
 cd "$(dirname "$0")" && exec node start.mjs

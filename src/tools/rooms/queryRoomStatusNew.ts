@@ -1,5 +1,7 @@
 import type { ToolHandler } from '../../types/mcp.js';
-import { assertApiSuccess, handleError, createSuccessResult } from '../../utils/errorHandler.js';
+import { assertApiSuccess, handleToolError, createSuccessResult } from '../../utils/errorHandler.js';
+import { isOverseas } from '../../region/index.js';
+import { queryRoomStatusNewOverseas } from '../overseas/rooms.js';
 import { resolveDateAndDaysForNaturalWeek } from '../../utils/shanghaiDate.js';
 import { z } from 'zod';
 
@@ -53,6 +55,9 @@ export const queryRoomStatusNewHandler: ToolHandler = async (args, context) => {
 
     // 权限检查
     permissionChecker.checkPermission('query_room_status_new', ['rooms:read']);
+    if (isOverseas(context)) {
+      return queryRoomStatusNewOverseas(args, context);
+    }
 
     // 参数验证
     const validatedParams = queryRoomStatusNewSchema.parse(args);
@@ -105,6 +110,6 @@ export const queryRoomStatusNewHandler: ToolHandler = async (args, context) => {
 
     return createSuccessResult(response.data || { roomStatusViews: [] });
   } catch (error) {
-    return handleError(error);
+    return handleToolError(error, context);
   }
 };

@@ -15,8 +15,10 @@ function toolToPermissionDomain(toolName: string): PermissionFriendlyDomain {
     case 'query_pre_departure_orders':
     case 'query_orders_by_date_range':
     case 'get_order_details_v2':
-    case 'query_orders':
-    case 'get_order_details':
+    case 'check_in_order':
+    case 'check_out_order':
+    case 'extend_order':
+    case 'arrange_room':
       return 'orders';
     case 'query_operational_data_v2':
       return 'finance';
@@ -34,16 +36,15 @@ export class PermissionChecker {
   constructor(private keyManager: APIKeyManager) {}
 
   /**
-   * 检查工具调用权限
+   * Check whether the caller may invoke a tool.
    */
   checkPermission(toolName: string, requiredScopes: string[]): void {
     if (requiredScopes.length === 0) {
-      // 如果没有权限要求，则允许
+      // No scope requirement — allow
       return;
     }
 
-    // 如果只有Hudson认证（没有API key和权限范围），则允许所有操作
-    // 因为Hudson认证本身就包含了权限验证
+    // Hudson-only auth (no API key/scopes): allow; Hudson enforces permissions
     if (!this.keyManager.hasAPIKey() && this.keyManager.isHudsonConfigured()) {
       logger.debug('Permission check passed (Hudson auth only)', {
         tool: toolName,

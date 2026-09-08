@@ -1,11 +1,13 @@
 import type { ToolHandler } from '../../types/mcp.js';
 import {
   assertApiSuccess,
-  handleError,
+  handleToolError,
   createSuccessResult,
   MCPError,
   ErrorCode,
 } from '../../utils/errorHandler.js';
+import { isOverseas } from '../../region/index.js';
+import { getOrderDetailsOverseas } from '../overseas/orders.js';
 import { desensitizeOrderDetail, stripOrderDetailDiscountFields } from '../../utils/desensitize.js';
 import { z } from 'zod';
 
@@ -164,6 +166,9 @@ export const getOrderDetailsV2Handler: ToolHandler = async (args, context) => {
 
     // 权限检查
     permissionChecker.checkPermission('get_order_details_v2', ['orders:read']);
+    if (isOverseas(context)) {
+      return getOrderDetailsOverseas(args, context);
+    }
 
     // 参数验证
     const validatedParams = getOrderDetailsV2Schema.parse(args);
@@ -207,6 +212,6 @@ export const getOrderDetailsV2Handler: ToolHandler = async (args, context) => {
     );
     return createSuccessResult(safeData);
   } catch (error) {
-    return handleError(error);
+    return handleToolError(error, context);
   }
 };

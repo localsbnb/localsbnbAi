@@ -45,14 +45,14 @@ temp/
 config/local.json
 config/production.json
 
-# Local / IDE（勿提交个人环境）
+# Local / IDE (personal environment — do not commit)
 .claude/
+.apifox/
 
-# 构建产物压缩包（勿提交）
-dist.zip
+# Build artifact archives (do not commit)
 /*.zip
 
-# 仓库根目录仅保留 README.md，其余根级 *.md 不上传
+# Root: only README.md is tracked; other docs live in docs/internal (also ignored)
 /*.md
 !/README.md
 
@@ -63,4 +63,17 @@ dist.zip
 .cursor/
 skills/
 docker/
-docs/
+docs/*
+!docs/overseas/
+!docs/overseas/**
+!docs/readme/
+!docs/readme/**
+
+# Internal design docs — never publish
+docs/internal/
+
+# Apifox API dumps (Chinese source material — do not publish)
+docs/overseas-apifox/
+
+# Internal overseas QA checklist (not user-facing docs)
+docs/overseas/test-checklist.md

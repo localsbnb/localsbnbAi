@@ -1,5 +1,7 @@
 import type { ToolHandler } from '../../types/mcp.js';
-import { handleError } from '../../utils/errorHandler.js';
+import { handleToolError } from '../../utils/errorHandler.js';
+import { isOverseas } from '../../region/index.js';
+import { queryTodayOrdersOverseas } from '../overseas/orders.js';
 import { z } from 'zod';
 import { fetchOrdersByType, formatOrderList } from './ordersGetShared.js';
 
@@ -13,6 +15,9 @@ export const queryTodayOrdersHandler: ToolHandler = async (args, context) => {
   try {
     const { logger, permissionChecker } = context;
     permissionChecker.checkPermission('query_today_orders', ['orders:read']);
+    if (isOverseas(context)) {
+      return queryTodayOrdersOverseas(args, context);
+    }
     const params = schema.parse(args);
 
     const [preArrival, inHouse, preDeparture] = await Promise.all([
@@ -55,6 +60,6 @@ export const queryTodayOrdersHandler: ToolHandler = async (args, context) => {
       ],
     };
   } catch (error) {
-    return handleError(error);
+    return handleToolError(error, context);
   }
 };

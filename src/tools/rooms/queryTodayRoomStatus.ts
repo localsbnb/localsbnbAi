@@ -1,5 +1,7 @@
 import type { ToolHandler } from '../../types/mcp.js';
-import { assertApiSuccess, handleError, createSuccessResult } from '../../utils/errorHandler.js';
+import { assertApiSuccess, handleToolError, createSuccessResult } from '../../utils/errorHandler.js';
+import { isOverseas } from '../../region/index.js';
+import { queryTodayRoomStatusOverseas } from '../overseas/rooms.js';
 import { desensitizeRoomStatusItem } from '../../utils/desensitize.js';
 import { z } from 'zod';
 
@@ -95,6 +97,9 @@ export const queryTodayRoomStatusHandler: ToolHandler = async (args, context) =>
 
     // 权限检查
     permissionChecker.checkPermission('query_today_room_status', ['rooms:read']);
+    if (isOverseas(context)) {
+      return queryTodayRoomStatusOverseas(args, context);
+    }
 
     // 参数验证
     const validatedParams = queryTodayRoomStatusSchema.parse(args);
@@ -158,6 +163,6 @@ export const queryTodayRoomStatusHandler: ToolHandler = async (args, context) =>
       queryDate: date,
     });
   } catch (error) {
-    return handleError(error);
+    return handleToolError(error, context);
   }
 };

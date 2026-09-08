@@ -1,4 +1,4 @@
-# 避免本地运行痕迹、日志、环境文件进入 npm 包（files 白名单仍会尊重此处排除）
+# Keep local run artifacts, logs, and env files out of the npm package (package.json "files" still honors these exclusions)
 dist/logs/
 logs/
 **/*.log

@@ -1,5 +1,7 @@
 import type { ToolHandler } from '../../types/mcp.js';
-import { handleError } from '../../utils/errorHandler.js';
+import { handleToolError } from '../../utils/errorHandler.js';
+import { isOverseas } from '../../region/index.js';
+import { queryOrdersByDateRangeOverseas } from '../overseas/orders.js';
 import { getLastWeekRange, getThisWeekRange, getTodayShanghai } from '../../utils/shanghaiDate.js';
 import { z } from 'zod';
 import { fetchOrdersByDateRange, formatOrderList } from './ordersGetShared.js';
@@ -58,6 +60,9 @@ export const queryOrdersByDateRangeHandler: ToolHandler = async (args, context) 
   try {
     const { logger, permissionChecker } = context;
     permissionChecker.checkPermission('query_orders_by_date_range', ['orders:read']);
+    if (isOverseas(context)) {
+      return queryOrdersByDateRangeOverseas(args, context);
+    }
     const params = schema.parse(args);
     const range = resolveQueryDateRange(params);
     const data = await fetchOrdersByDateRange(
@@ -87,6 +92,6 @@ export const queryOrdersByDateRangeHandler: ToolHandler = async (args, context) 
       ],
     };
   } catch (error) {
-    return handleError(error);
+    return handleToolError(error, context);
   }
 };

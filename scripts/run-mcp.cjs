@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * CommonJS 启动器：在 Cursor 等环境下通过子进程启动 ESM 入口 start.mjs。
- * 子进程移除 NODE_OPTIONS，避免 --require 等导致 ESM 被当成 CJS 加载。
+ * CommonJS launcher: spawn the ESM entry start.mjs as a child process (for Cursor and similar hosts).
+ * NODE_OPTIONS is stripped in the child so flags like --require do not force ESM to load as CJS.
  */
 const path = require('path');
 const { spawnSync } = require('child_process');

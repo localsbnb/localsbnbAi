@@ -1,5 +1,7 @@
 import type { ToolHandler } from '../../types/mcp.js';
-import { handleError } from '../../utils/errorHandler.js';
+import { handleToolError } from '../../utils/errorHandler.js';
+import { isOverseas } from '../../region/index.js';
+import { queryPreDepartureOrdersOverseas } from '../overseas/orders.js';
 import { z } from 'zod';
 import { fetchOrdersByType, formatOrderList } from './ordersGetShared.js';
 
@@ -13,6 +15,9 @@ export const queryPreDepartureOrdersHandler: ToolHandler = async (args, context)
   try {
     const { logger, permissionChecker } = context;
     permissionChecker.checkPermission('query_pre_departure_orders', ['orders:read']);
+    if (isOverseas(context)) {
+      return queryPreDepartureOrdersOverseas(args, context);
+    }
     const params = schema.parse(args);
     const data = await fetchOrdersByType(context, '12', params.pageNum, params.pageSize, params.keyword);
     logger.info('Pre-departure orders queried', {
@@ -30,6 +35,6 @@ export const queryPreDepartureOrdersHandler: ToolHandler = async (args, context)
       ],
     };
   } catch (error) {
-    return handleError(error);
+    return handleToolError(error, context);
   }
 };

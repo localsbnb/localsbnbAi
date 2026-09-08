@@ -1,6 +1,7 @@
 import { ZodError } from 'zod';
 import type { ToolResult } from '../types/mcp.js';
 import { logger } from './logger.js';
+import { t, type AppLocale } from '../region/i18n.js';
 
 /** 无权限时的规范话术（与产品文档一致） */
 export type PermissionFriendlyDomain = 'orders' | 'finance' | 'room_status' | 'room_price' | 'generic';
@@ -59,7 +60,33 @@ const FRIENDLY_MESSAGES: Record<ErrorCode, string> = {
   [ErrorCode.INTERNAL_ERROR]: '系统暂时有点忙，请稍后再试。',
 };
 
-function getFriendlyMessage(code: ErrorCode, details?: unknown): string {
+function getFriendlyMessage(code: ErrorCode, details?: unknown, locale?: AppLocale): string {
+  if (locale) {
+    if (details != null && typeof details === 'object') {
+      const d = details as Record<string, unknown>;
+      if (code === ErrorCode.PERMISSION_DENIED && typeof d.domain === 'string') {
+        const key = `error.permission.${d.domain}`;
+        const localized = t(locale, key);
+        if (localized !== key) return localized;
+      }
+      if (code === ErrorCode.API_NOT_FOUND && d.domain === 'order_detail') {
+        return t(locale, 'error.orderNotFound');
+      }
+    }
+    const byCode: Partial<Record<ErrorCode, string>> = {
+      [ErrorCode.AUTH_REQUIRED]: 'error.auth',
+      [ErrorCode.AUTH_INVALID]: 'error.auth',
+      [ErrorCode.PERMISSION_DENIED]: 'error.permission',
+      [ErrorCode.INVALID_PARAMS]: 'error.params',
+      [ErrorCode.MISSING_PARAMS]: 'error.params',
+      [ErrorCode.API_ERROR]: 'error.api',
+      [ErrorCode.API_TIMEOUT]: 'error.timeout',
+      [ErrorCode.API_RATE_LIMIT]: 'error.rate',
+      [ErrorCode.API_NOT_FOUND]: 'error.notFound',
+      [ErrorCode.INTERNAL_ERROR]: 'error.internal',
+    };
+    return t(locale, byCode[code] || 'error.internal');
+  }
   if (details != null && typeof details === 'object') {
     const d = details as Record<string, unknown>;
     if (code === ErrorCode.PERMISSION_DENIED && typeof d.domain === 'string') {
@@ -74,8 +101,8 @@ function getFriendlyMessage(code: ErrorCode, details?: unknown): string {
 }
 
 /** 给用户/LLM 的一句话摘要：友好提示 + 具体原因（避免重复整段 JSON） */
-function buildUserHint(code: ErrorCode, message: string, details?: unknown): string {
-  const friendly = getFriendlyMessage(code, details);
+function buildUserHint(code: ErrorCode, message: string, details?: unknown, locale?: AppLocale): string {
+  const friendly = getFriendlyMessage(code, details, locale);
   // 无权限：仅展示规范话术，不拼接「需要 orders:read」等技术说明（与产品文档一致）
   if (code === ErrorCode.PERMISSION_DENIED) {
     return friendly;
@@ -100,6 +127,77 @@ export interface HudsonApiEnvelope {
   errorMsg?: string;
   errorCode?: string;
   errorDetail?: string;
+}
+
+function looksLikeInvalidParams(text: string): boolean {
+  const m = text.toLowerCase();
+  return (
+    m.includes('required') ||
+    m.includes('missing') ||
+    m.includes('invalid param') ||
+    m.includes('param error') ||
+    m.includes('invalid_params') ||
+    m.includes('必填') ||
+    m.includes('缺少') ||
+    (m.includes('参数') && (m.includes('错误') || m.includes('无效') || m.includes('缺失')))
+  );
+}
+
+function looksLikeOrderNotFound(text: string): boolean {
+  const m = text.toLowerCase();
+  return (
+    m.includes('order not found') ||
+    m.includes('not found') ||
+    m.includes('未查询到') ||
+    m.includes('未找到') ||
+    m.includes('不存在') ||
+    m.includes('見つかりません') ||
+    m.includes('param error')
+  );
+}
+
+const HUDSON_AUTH_CODES = new Set(['USER_TOKEN_INVALID', 'USER_NOT_LOGIN']);
+
+export function looksLikeHudsonAuthFailure(text: string): boolean {
+  const m = text.toLowerCase();
+  return (
+    HUDSON_AUTH_CODES.has(text.trim().toUpperCase()) ||
+    m.includes('user_token_invalid') ||
+    m.includes('user_not_login') ||
+    m.includes('unauthorized') ||
+    m.includes('未登录') ||
+    m.includes('秘钥') ||
+    m.includes('鉴权') ||
+    (m.includes('token') && (m.includes('invalid') || m.includes('expire') || m.includes('无效')))
+  );
+}
+
+export function isHudsonAuthError(error: unknown): boolean {
+  if (error instanceof MCPError) {
+    return error.code === ErrorCode.AUTH_INVALID || error.code === ErrorCode.AUTH_REQUIRED;
+  }
+  return error instanceof Error && looksLikeHudsonAuthFailure(error.message);
+}
+
+export function hudsonAuthErrorFromResponse(
+  response: HudsonApiEnvelope,
+  actionLabel: string
+): MCPError | null {
+  const apiErrorCode = String(response.errorCode ?? '').trim().toUpperCase();
+  const technical =
+    [response.errorMsg, response.errorDetail, response.errorCode]
+      .map((s) => (s == null ? '' : String(s).trim()))
+      .find((s) => s.length > 0) || `${actionLabel}失败`;
+  if (!HUDSON_AUTH_CODES.has(apiErrorCode) && !looksLikeHudsonAuthFailure(technical)) {
+    return null;
+  }
+  return new MCPError(ErrorCode.AUTH_INVALID, technical, {
+    action: actionLabel,
+    errorCode: response.errorCode,
+    errorMsg: response.errorMsg,
+    errorDetail: response.errorDetail,
+    source: '路客云AI',
+  });
 }
 
 function looksLikePermissionDenied(text: string): boolean {
@@ -127,22 +225,12 @@ export function assertApiSuccess(
   permissionDomain?: PermissionFriendlyDomain
 ): void {
   if (response.success === true) return;
-  const apiErrorCode = String(response.errorCode ?? '').trim().toUpperCase();
+  const authError = hudsonAuthErrorFromResponse(response, actionLabel);
+  if (authError) throw authError;
   const technical =
     [response.errorMsg, response.errorDetail, response.errorCode]
       .map((s) => (s == null ? '' : String(s).trim()))
       .find((s) => s.length > 0) || `${actionLabel}失败`;
-
-  // 鉴权失败（token 无效/未登录/秘钥错误）统一返回 AUTH_INVALID，便于前端与提示话术稳定落地
-  if (apiErrorCode === 'USER_TOKEN_INVALID' || apiErrorCode === 'USER_NOT_LOGIN') {
-    throw new MCPError(ErrorCode.AUTH_INVALID, technical, {
-      action: actionLabel,
-      errorCode: response.errorCode,
-      errorMsg: response.errorMsg,
-      errorDetail: response.errorDetail,
-      source: '路客云AI',
-    });
-  }
 
   if (looksLikePermissionDenied(technical)) {
     throw new MCPError(ErrorCode.PERMISSION_DENIED, technical, {
@@ -175,11 +263,19 @@ export class MCPError extends Error {
   }
 }
 
-export function handleError(error: unknown): ToolResult {
+export function handleToolError(
+  error: unknown,
+  context?: { regionProfile?: { region?: string; locale?: AppLocale } }
+): ToolResult {
+  const locale = context?.regionProfile?.region === 'overseas' ? context.regionProfile.locale : undefined;
+  return handleError(error, locale);
+}
+
+export function handleError(error: unknown, locale?: AppLocale): ToolResult {
   logger.error('Tool execution error', error instanceof Error ? error : new Error(String(error)));
 
   if (error instanceof MCPError) {
-    const friendlyMessage = getFriendlyMessage(error.code, error.details);
+    const friendlyMessage = getFriendlyMessage(error.code, error.details, locale);
     return {
       content: [
         {
@@ -190,7 +286,7 @@ export function handleError(error: unknown): ToolResult {
               code: error.code,
               message: error.message,
               friendlyMessage,
-              userHint: buildUserHint(error.code, error.message, error.details),
+              userHint: buildUserHint(error.code, error.message, error.details, locale),
               details: error.details,
             },
             null,
@@ -204,7 +300,7 @@ export function handleError(error: unknown): ToolResult {
 
   if (error instanceof ZodError) {
     const errors = error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join('\n');
-    const friendlyMessage = getFriendlyMessage(ErrorCode.INVALID_PARAMS);
+    const friendlyMessage = getFriendlyMessage(ErrorCode.INVALID_PARAMS, undefined, locale);
     return {
       content: [
         {
@@ -215,7 +311,7 @@ export function handleError(error: unknown): ToolResult {
               code: ErrorCode.INVALID_PARAMS,
               message: '参数验证失败',
               friendlyMessage,
-              userHint: buildUserHint(ErrorCode.INVALID_PARAMS, errors),
+              userHint: buildUserHint(ErrorCode.INVALID_PARAMS, errors, undefined, locale),
               details: errors,
             },
             null,
@@ -229,7 +325,7 @@ export function handleError(error: unknown): ToolResult {
 
   if (error instanceof Error) {
     const code = inferErrorCodeFromMessage(error.message);
-    const friendlyMessage = getFriendlyMessage(code);
+    const friendlyMessage = getFriendlyMessage(code, undefined, locale);
     return {
       content: [
         {
@@ -240,7 +336,7 @@ export function handleError(error: unknown): ToolResult {
               code,
               message: error.message,
               friendlyMessage,
-              userHint: buildUserHint(code, error.message),
+              userHint: buildUserHint(code, error.message, undefined, locale),
             },
             null,
             2
@@ -260,8 +356,8 @@ export function handleError(error: unknown): ToolResult {
             error: true,
             code: ErrorCode.INTERNAL_ERROR,
             message: '未知错误',
-            friendlyMessage: getFriendlyMessage(ErrorCode.INTERNAL_ERROR),
-            userHint: buildUserHint(ErrorCode.INTERNAL_ERROR, '未知错误', String(error)),
+            friendlyMessage: getFriendlyMessage(ErrorCode.INTERNAL_ERROR, undefined, locale),
+            userHint: buildUserHint(ErrorCode.INTERNAL_ERROR, '未知错误', String(error), locale),
             details: String(error),
           },
           null,
@@ -279,6 +375,7 @@ function inferErrorCodeFromMessage(message: string): ErrorCode {
   const m = message.toLowerCase();
   if (m.includes('timeout') || m.includes('超时')) return ErrorCode.API_TIMEOUT;
   if (m.includes('rate') || m.includes('limit') || m.includes('限流') || m.includes('频繁')) return ErrorCode.API_RATE_LIMIT;
+  if (looksLikeInvalidParams(message)) return ErrorCode.INVALID_PARAMS;
   if (m.includes('camp') || m.includes('token') || m.includes('auth') || m.includes('鉴权')) return ErrorCode.AUTH_REQUIRED;
   if (
     m.includes('接口') ||
@@ -290,6 +387,16 @@ function inferErrorCodeFromMessage(message: string): ErrorCode {
     return ErrorCode.API_ERROR;
   }
   return ErrorCode.INTERNAL_ERROR;
+}
+
+export function isOrderNotFoundError(error: unknown): boolean {
+  if (error instanceof MCPError) {
+    if (error.code === ErrorCode.API_NOT_FOUND) return true;
+    const details = error.details != null ? JSON.stringify(error.details) : '';
+    return looksLikeOrderNotFound(`${error.message} ${details}`);
+  }
+  if (error instanceof Error) return looksLikeOrderNotFound(error.message);
+  return looksLikeOrderNotFound(String(error));
 }
 
 export function createSuccessResult(data: unknown): ToolResult {

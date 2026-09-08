@@ -10,6 +10,7 @@ export class HTTPClient implements APIClient {
   private apiKey: string;
   private hudsonAccessToken?: string;
   private retryHandler: RetryHandler;
+  private extraHeaders: Record<string, string> = {};
 
   constructor(apiKey: string, hudsonAccessToken?: string) {
     this.apiKey = apiKey;
@@ -40,6 +41,9 @@ export class HTTPClient implements APIClient {
         // 如果提供了Hudson token，添加到header
         if (this.hudsonAccessToken) {
           config.headers['hudson-access-token'] = this.hudsonAccessToken;
+        }
+        for (const [key, value] of Object.entries(this.extraHeaders)) {
+          if (value) config.headers[key] = value;
         }
         logger.debug('API request', {
           method: config.method,
@@ -123,6 +127,10 @@ export class HTTPClient implements APIClient {
       logger.error('Request configuration error', error);
       throw new MCPError(ErrorCode.INTERNAL_ERROR, '请求配置错误');
     }
+  }
+
+  setExtraHeaders(headers: Record<string, string>): void {
+    this.extraHeaders = { ...headers };
   }
 
   async request<T>(requestConfig: RequestConfig): Promise<T> {

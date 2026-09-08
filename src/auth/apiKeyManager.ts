@@ -7,16 +7,16 @@ export class APIKeyManager {
   private campId: string | null = null;
 
   /**
-   * 从环境变量加载API密钥
+   * Load API key from environment variables.
    */
   loadFromEnv(): void {
     this.apiKey = process.env.LUKEYUN_API_KEY || null;
     const scopesStr = process.env.LUKEYUN_API_SCOPES;
     this.scopes = scopesStr ? scopesStr.split(',').map((s) => s.trim()) : [];
     
-    // 加载应用鉴权信息（APP_SECRET / APP_ID）
-    this.hudsonAccessToken = process.env.APP_SECRET || null;
-    this.campId = process.env.APP_ID || null;
+    // Load app credentials (APP_SECRET / APP_ID)
+    this.hudsonAccessToken = process.env.APP_SECRET || process.env.HUDSON_ACCESS_TOKEN || null;
+    this.campId = process.env.APP_ID || process.env.CAMP_ID || null;
 
     if (!this.apiKey) {
       logger.warn('API key not found in environment variables');
@@ -32,7 +32,7 @@ export class APIKeyManager {
   }
 
   /**
-   * 从配置文件加载API密钥
+   * Load API key from configuration.
    */
   loadFromConfig(config: { 
     apiKey?: string; 
@@ -55,7 +55,7 @@ export class APIKeyManager {
   }
 
   /**
-   * 设置API密钥
+   * Set API key and optional scopes.
    */
   setAPIKey(apiKey: string, scopes?: string[]): void {
     this.apiKey = apiKey;
@@ -64,7 +64,7 @@ export class APIKeyManager {
   }
 
   /**
-   * 设置Hudson认证信息
+   * Set Hudson authentication credentials.
    */
   setHudsonCredentials(accessToken: string, campId: string): void {
     this.hudsonAccessToken = accessToken;
@@ -73,25 +73,25 @@ export class APIKeyManager {
   }
 
   /**
-   * 获取API密钥
-   * 如果未配置，返回空字符串（用于仅使用Hudson认证的场景）
+   * Get API key.
+   * Returns empty string when not configured (Hudson-only auth scenarios).
    */
   getAPIKey(): string {
     return this.apiKey || '';
   }
 
   /**
-   * 检查是否配置了API密钥
+   * Whether an API key is configured.
    */
   hasAPIKey(): boolean {
     return this.apiKey !== null && this.apiKey !== '';
   }
 
   /**
-   * 检查是否有指定权限
+   * Whether the given scope is granted.
    */
   hasScope(scope: string): boolean {
-    // 如果有 * 权限，则拥有所有权限
+    // Wildcard scope grants all permissions
     if (this.scopes.includes('*')) {
       return true;
     }
@@ -99,28 +99,28 @@ export class APIKeyManager {
   }
 
   /**
-   * 获取所有权限范围
+   * Get all granted scopes.
    */
   getScopes(): string[] {
     return [...this.scopes];
   }
 
   /**
-   * 检查是否已配置
+   * Whether an API key has been set (may be empty).
    */
   isConfigured(): boolean {
     return this.apiKey !== null;
   }
 
   /**
-   * 检查Hudson认证是否已配置
+   * Whether Hudson authentication is configured.
    */
   isHudsonConfigured(): boolean {
     return this.hudsonAccessToken !== null && this.campId !== null;
   }
 
   /**
-   * 获取Hudson访问令牌
+   * Get Hudson access token.
    */
   getHudsonAccessToken(): string {
     if (!this.hudsonAccessToken) {
@@ -130,7 +130,7 @@ export class APIKeyManager {
   }
 
   /**
-   * 获取Camp ID
+   * Get camp ID.
    */
   getCampId(): string {
     if (!this.campId) {

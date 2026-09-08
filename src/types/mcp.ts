@@ -1,4 +1,5 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
+import type { RegionProfile } from '../region/types.js';
 
 export interface ToolHandler {
   (args: Record<string, unknown>, context: ToolContext): Promise<ToolResult>;
@@ -9,6 +10,7 @@ export interface ToolContext {
   logger: Logger;
   permissionChecker: PermissionChecker;
   campId?: string; // Hudson认证的campId
+  regionProfile?: RegionProfile;
 }
 
 export interface ToolResult {

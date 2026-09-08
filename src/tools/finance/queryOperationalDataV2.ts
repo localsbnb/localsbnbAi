@@ -1,11 +1,13 @@
 import type { ToolHandler } from '../../types/mcp.js';
 import {
   assertApiSuccess,
-  handleError,
+  handleToolError,
   createSuccessResult,
   MCPError,
   ErrorCode,
 } from '../../utils/errorHandler.js';
+import { isOverseas } from '../../region/index.js';
+import { queryOperationalDataOverseas } from '../overseas/finance.js';
 import { getLastWeekRange, getThisWeekRange, getTodayShanghai } from '../../utils/shanghaiDate.js';
 import { z } from 'zod';
 
@@ -128,6 +130,9 @@ export const queryOperationalDataV2Handler: ToolHandler = async (args, context) 
 
     // 权限检查
     permissionChecker.checkPermission('query_operational_data_v2', ['finance:read']);
+    if (isOverseas(context)) {
+      return queryOperationalDataOverseas(args, context);
+    }
 
     // 参数验证
     const validatedParams = queryOperationalDataV2Schema.parse(args);
@@ -265,6 +270,6 @@ export const queryOperationalDataV2Handler: ToolHandler = async (args, context) 
 
     return createSuccessResult(mergedData);
   } catch (error) {
-    return handleError(error);
+    return handleToolError(error, context);
   }
 };

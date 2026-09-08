@@ -1,75 +1,75 @@
 #!/bin/bash
 
-# 路客云MCP Server 安装脚本
+# LocalsBnb MCP Server install script
 
-echo "🚀 开始安装路客云MCP Server..."
+echo "🚀 Installing LocalsBnb MCP Server..."
 
-# 检查Node.js
+# Check Node.js
 if ! command -v node &> /dev/null; then
-    echo "❌ 错误: 未找到Node.js，请先安装Node.js 18+"
+    echo "❌ Error: Node.js not found. Install Node.js 18+ first."
     exit 1
 fi
 
 NODE_VERSION=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
 if [ "$NODE_VERSION" -lt 18 ]; then
-    echo "❌ 错误: Node.js版本过低，需要18+，当前版本: $(node -v)"
+    echo "❌ Error: Node.js 18+ required; current version: $(node -v)"
     exit 1
 fi
 
-echo "✅ Node.js版本检查通过: $(node -v)"
+echo "✅ Node.js OK: $(node -v)"
 
-# 安装依赖
+# Install dependencies
 echo ""
-echo "📦 安装依赖..."
+echo "📦 Installing dependencies..."
 npm install
 
 if [ $? -ne 0 ]; then
-    echo "❌ 依赖安装失败"
+    echo "❌ npm install failed"
     exit 1
 fi
 
-echo "✅ 依赖安装完成"
+echo "✅ Dependencies installed"
 
-# 构建项目
+# Build
 echo ""
-echo "🔨 构建项目..."
+echo "🔨 Building..."
 npm run build
 
 if [ $? -ne 0 ]; then
-    echo "❌ 构建失败"
+    echo "❌ Build failed"
     exit 1
 fi
 
-echo "✅ 构建完成"
+echo "✅ Build complete"
 
-# 检查.env文件
+# .env from template
 if [ ! -f .env ]; then
     echo ""
-    echo "⚠️  未找到.env文件，正在从模板创建..."
+    echo "⚠️  No .env file; creating from template..."
     if [ -f env.template ]; then
         cp env.template .env
-        echo "✅ 已创建.env文件，请编辑并填写您的配置"
+        echo "✅ Created .env — edit it with your credentials"
     else
-        echo "❌ 未找到env.template文件"
+        echo "❌ env.template not found"
     fi
 fi
 
-# 获取绝对路径
+# Absolute path for MCP config snippet
 PROJECT_DIR=$(pwd)
 DIST_FILE="$PROJECT_DIR/dist/index.js"
 
 echo ""
-echo "✅ 安装完成！"
+echo "✅ Install complete!"
 echo ""
-echo "📝 下一步："
-echo "1. 编辑 .env 文件，填写您的配置："
+echo "📝 Next steps:"
+echo "1. Edit .env and set:"
 echo "   - HUDSON_ACCESS_TOKEN"
 echo "   - CAMP_ID"
 echo ""
-echo "2. 配置Cursor MCP Server："
-echo "   配置文件位置: ~/.cursor/mcp.json 或 ~/.config/cursor/mcp.json"
+echo "2. Configure Cursor MCP Server:"
+echo "   Config file: ~/.cursor/mcp.json or ~/.config/cursor/mcp.json"
 echo ""
-echo "   添加以下配置："
+echo "   Add:"
 echo "   {"
 echo "     \"mcpServers\": {"
 echo "       \"lukeyun-pms\": {"
@@ -77,13 +77,13 @@ echo "         \"command\": \"node\","
 echo "         \"args\": [\"$DIST_FILE\"],"
 echo "         \"env\": {"
 echo "           \"LUKEYUN_API_BASE_URL\": \"https://api.lukeyun.com\","
-echo "           \"HUDSON_ACCESS_TOKEN\": \"从.env文件读取\","
-echo "           \"CAMP_ID\": \"从.env文件读取\""
+echo "           \"HUDSON_ACCESS_TOKEN\": \"<from your .env file>\","
+echo "           \"CAMP_ID\": \"<from your .env file>\""
 echo "         }"
 echo "       }"
 echo "     }"
 echo "   }"
 echo ""
-echo "3. 重启Cursor"
+echo "3. Restart Cursor"
 echo ""
-echo "📖 详细配置说明请查看: CURSOR_SETUP.md"
+echo "📖 See docs/internal/CURSOR_SETUP.md for detailed setup"
