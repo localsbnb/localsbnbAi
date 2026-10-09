@@ -13,7 +13,6 @@ import {
   resolveNaturalWeek,
   t,
   toOverseasDays,
-  toZoneStartMs,
   weekdayShort,
 } from '../../region/index.js';
 import { createSuccessResult } from '../../utils/errorHandler.js';
@@ -70,10 +69,12 @@ export function buildRoomStatusPayload(params: {
   timeZone: string;
   roomCategoryIds?: number[];
   searchKey?: string;
-}): { campId: string; startDate: number; days: number; roomCategoryIds?: number[]; searchKey?: string } {
+}): { campId: string; startDate: string; days: number; roomCategoryIds?: number[]; searchKey?: string } {
+  // Align with overseas PC: startDate is YYYY-MM-DD. Epoch ms trips Hudson
+  // "date:trigger union validation" on rooms/get and reservation/get.
   return {
     campId: params.campId,
-    startDate: toZoneStartMs(params.startDate, params.timeZone),
+    startDate: params.startDate,
     days: toOverseasDays(params.calendarDays),
     roomCategoryIds: params.roomCategoryIds,
     searchKey: params.searchKey || undefined,

@@ -1,0 +1,10 @@
+{
+  "LocalsBnb MCP": {
+    "command": "npx",
+    "args": ["--yes", "localsbnb-mcp-server"],
+    "env": {
+      "LUKEYUN_API_BASE_URL": "https://hudson-prod.localhome.cn",
+      "LOCALSBNB_SITE_URL": "https://localsbnb.com"
+    }
+  }
+}

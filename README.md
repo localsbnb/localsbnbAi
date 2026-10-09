@@ -78,7 +78,16 @@ Compare channels in one breath. No four logins.
 
 **15:00, housekeeper in the corridor**  
 “Which rooms are empty and clean right now?”  
-She does not need your password. You look, you tell her.
+“Mark 302 dirty.” / “Mark the sea-view room clean.” *(overseas store)*  
+She does not need your password. You look, you tell her — or you change the clean status in the same chat.
+
+**16:20, a walk-in guest**  
+“Create a manual booking for Zhang, check in tonight, check out Sunday, one adult.” *(overseas store)*  
+You see the quote first. You confirm. Then the order exists.
+
+**17:05, weekend pricing**  
+“Set this Airbnb rate to 100 for Friday and Saturday — show me first.” *(overseas store)*  
+Preview the dates and amount. You say yes. Then the calendar updates.
 
 **18:00, owner group chat**  
 “How did we do this week? Occupancy, average price, revenue.”  
@@ -99,15 +108,25 @@ You decide whether to raise the weekend or leave it — with the week in front o
 **First day of a new staff member**  
 They do not learn menus. They learn three sentences: *today’s arrivals, today’s rooms, this week’s numbers.*
 
-### Handle the stay — overseas LocalsBnb stores only
+### Open the store & connect channels — overseas LocalsBnb stores only
 
-You can ask the AI to **check in, check out, extend, or change a room**.
+New host? You can **register or sign in in the chat** — email, code, password — without hunting through another install wizard.
 
-It will never do it quietly. You always see the guest and the dates first. You say “that’s the one.” Only then it goes through.
+Already live? Say **“Connect Airbnb”** or **“Connect Booking / Trip / Agoda.”** LocalsBnb opens the browser page (phone or desktop). You finish the channel steps there. Come back and say **“Done.”** The AI checks the link — it does not ask you to paste property IDs.
+
+![Say connect. Finish in the browser. Say Done — AI verifies the channel.](docs/readme/assets/localsbnb-channels.png)
+
+### Handle the stay & run the calendar — overseas LocalsBnb stores only
+
+You can ask the AI to **check in, check out, extend, change a room, create a manual order, update channel rates, close or open rooms, and set dirty / clean**.
+
+It will never do writes quietly. You always see the guest, dates, amounts, or clean status first. You say “that’s the one.” Only then it goes through.
+
+![Account, order, rates, clean status — always preview, then you confirm.](docs/readme/assets/localsbnb-ops.png)
 
 ![The AI shows the booking first. You confirm. Then it happens.](docs/readme/assets/localsbnb-confirm.png)
 
-**If your store is in China:** you can ask all the “what’s going on” questions. **Check-in, check-out, extend, and room change are not available in China yet.** Cancel, change the listed price, or sync a calendar — still do that in LocalsBnb.
+**If your store is in China:** you can ask all the “what’s going on” questions. **Check-in, check-out, extend, room change, channel connect, manual order, rate edits, and clean-status writes are not available in China yet.** Cancel or sync a calendar — still do that in LocalsBnb.
 
 ---
 
@@ -159,9 +178,14 @@ Hate config? Tell the AI itself:
 - “Show today’s rooms.”  
 - “Airbnb prices this week.”  
 - “How is this week going?”  
-- “Check Maria in — show me the booking first.” *(overseas)*
+- “Help me sign up for LocalsBnb.” / “Sign me in.” *(overseas)*  
+- “Connect Airbnb.” / “Connect Booking.” — then “Done.” *(overseas)*  
+- “Check Maria in — show me the booking first.” *(overseas)*  
+- “Create a booking for Zhang, tonight to Sunday.” *(overseas)*  
+- “Change this rate for Friday–Saturday — preview first.” *(overseas)*  
+- “Mark room 302 dirty.” / “Mark it clean.” *(overseas)*
 
-Answers follow the **language of the property** in LocalsBnb. You do not pick English or Japanese again here.
+Answers follow the **language of the property** in LocalsBnb. You do not pick English or Japanese again here. Channel pages work on **phone or desktop** browsers.
 
 ---
 

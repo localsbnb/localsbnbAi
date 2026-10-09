@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosError } from 'axios';
 import type { APIClient, RequestConfig } from '../types/mcp.js';
+import { formatHudsonAccessTokenHeader } from '../auth/hudsonToken.js';
 import { config } from '../config/index.js';
 import { logger } from '../utils/logger.js';
 import { MCPError, ErrorCode } from '../utils/errorHandler.js';
@@ -40,7 +41,7 @@ export class HTTPClient implements APIClient {
         }
         // 如果提供了Hudson token，添加到header
         if (this.hudsonAccessToken) {
-          config.headers['hudson-access-token'] = this.hudsonAccessToken;
+          config.headers['hudson-access-token'] = formatHudsonAccessTokenHeader(this.hudsonAccessToken);
         }
         for (const [key, value] of Object.entries(this.extraHeaders)) {
           if (value) config.headers[key] = value;
@@ -133,6 +134,11 @@ export class HTTPClient implements APIClient {
     this.extraHeaders = { ...headers };
   }
 
+  setHudsonAccessToken(token?: string): void {
+    const next = String(token ?? '').trim();
+    this.hudsonAccessToken = next || undefined;
+  }
+
   async request<T>(requestConfig: RequestConfig): Promise<T> {
     const axiosConfig: AxiosRequestConfig = {
       method: requestConfig.method,
@@ -143,7 +149,9 @@ export class HTTPClient implements APIClient {
     };
 
     try {
-      const response = await this.retryHandler.execute(() => this.client.request<T>(axiosConfig));
+      const response = requestConfig.retry === false
+        ? await this.client.request<T>(axiosConfig)
+        : await this.retryHandler.execute(() => this.client.request<T>(axiosConfig));
       return response.data;
     } catch (error) {
       // 错误已在拦截器中处理，直接抛出

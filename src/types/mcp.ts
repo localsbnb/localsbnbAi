@@ -11,6 +11,8 @@ export interface ToolContext {
   permissionChecker: PermissionChecker;
   campId?: string; // Hudson认证的campId
   regionProfile?: RegionProfile;
+  applyHudsonSession?: (accessToken: string, campId: string) => Promise<void>;
+  getHudsonAccessToken?: () => string;
 }
 
 export interface ToolResult {
@@ -28,9 +30,12 @@ export interface ToolDefinition extends Tool {
 
 export interface APIClient {
   request<T>(config: RequestConfig): Promise<T>;
+  setHudsonAccessToken?(token?: string): void;
 }
 
 export interface RequestConfig {
+  /** Disable automatic retries for non-idempotent writes. */
+  retry?: boolean;
   method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
   url: string;
   params?: Record<string, unknown>;

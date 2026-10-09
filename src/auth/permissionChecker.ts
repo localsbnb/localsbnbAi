@@ -19,13 +19,17 @@ function toolToPermissionDomain(toolName: string): PermissionFriendlyDomain {
     case 'check_out_order':
     case 'extend_order':
     case 'arrange_room':
+    case 'create_manual_order':
       return 'orders';
     case 'query_operational_data_v2':
       return 'finance';
     case 'query_today_room_status':
     case 'query_room_status_new':
+    case 'close_rooms':
+    case 'open_rooms':
       return 'room_status';
     case 'query_room_prices':
+    case 'update_channel_prices':
       return 'room_price';
     default:
       return 'generic';
@@ -51,6 +55,13 @@ export class PermissionChecker {
         requiredScopes,
       });
       return;
+    }
+
+    if (!this.keyManager.hasAPIKey() && !this.keyManager.isHudsonConfigured()) {
+      throw new MCPError(
+        ErrorCode.AUTH_REQUIRED,
+        'Sign in or register with LocalsBnb first (sign_in or send_signup_email_code / complete_sign_up).'
+      );
     }
 
     const hasPermission = requiredScopes.some((scope) => this.keyManager.hasScope(scope));

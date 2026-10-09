@@ -197,11 +197,14 @@ describe('region resolve isolation', () => {
 });
 
 describe('tool registration isolation', () => {
-  it('keeps CN tool names and does not register write tools', () => {
+  it('keeps CN query tools, prepends auth tools, and does not register write tools', () => {
     const cn = getActiveToolDefinitions(CN_PROFILE);
-    expect(cn).toBe(toolDefinitions);
+    expect(cn.map((t) => t.name)).toEqual(
+      expect.arrayContaining(['sign_in', 'complete_sign_up', 'query_today_orders'])
+    );
     expect(cn.map((t) => t.name)).not.toEqual(expect.arrayContaining(['check_in_order']));
-    expect(cn).toHaveLength(10);
+    expect(cn.filter((t) => t.name === 'query_today_orders')).toHaveLength(1);
+    expect(cn).toHaveLength(14);
   });
 
   it('registers write tools only for overseas and localizes descriptions', () => {
@@ -213,7 +216,12 @@ describe('tool registration isolation', () => {
     });
     const names = overseas.map((t) => t.name);
     expect(names).toEqual(
-      expect.arrayContaining(['check_in_order', 'check_out_order', 'extend_order', 'arrange_room'])
+      expect.arrayContaining([
+        'check_in_order',
+        'start_handshake',
+        'poll_handshake',
+        'import_airbnb_listings',
+      ])
     );
     const today = overseas.find((t) => t.name === 'query_today_orders');
     expect(today?.description).toBe(getOverseasToolDescription('query_today_orders', 'en'));

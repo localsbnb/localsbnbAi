@@ -3,12 +3,28 @@ import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { ListToolsRequestSchema, CallToolRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { getActiveToolDefinitions, toolDefinitions } from './config/tools.js';
 import { APIKeyManager } from './auth/apiKeyManager.js';
+import { writeStoredCredentials } from './auth/credentialsStore.js';
 import { PermissionChecker } from './auth/permissionChecker.js';
 import { HTTPClient } from './client/httpClient.js';
 import { logger } from './utils/logger.js';
 import { ErrorCode, handleToolError, isHudsonAuthError, MCPError } from './utils/errorHandler.js';
 import { CN_PROFILE, profilesDiffer, resolveRegionProfile, type RegionProfile } from './region/index.js';
+import { getAuthToolDefinitions, isAuthToolName } from './tools/auth/onboarding.js';
 import type { ToolContext, ToolDefinition } from './types/mcp.js';
+
+const REDACT_ARG_KEYS = new Set(['password', 'authCode', 'accessToken', 'token', 'previewId', 'guestName', 'guestEmail', 'guestMobile', 'note', 'remark']);
+
+function redactToolArgs(toolName: string, args: Record<string, unknown>): Record<string, unknown> {
+  const next: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(args)) {
+    if (REDACT_ARG_KEYS.has(key) || (isAuthToolName(toolName) && key.toLowerCase().includes('password'))) {
+      next[key] = value ? '[redacted]' : value;
+    } else {
+      next[key] = value;
+    }
+  }
+  return next;
+}
 
 export class LukeyunMCPServer {
   private server: Server;
@@ -47,30 +63,25 @@ export class LukeyunMCPServer {
     // 加载API密钥和Hudson认证信息
     this.apiKeyManager.loadFromEnv();
 
-    // 检查至少有一种认证方式
-    if (!this.apiKeyManager.isConfigured() && !this.apiKeyManager.isHudsonConfigured()) {
-      throw new Error(
-        'No authentication configured. Please set either LUKEYUN_API_KEY or APP_SECRET and APP_ID environment variables.'
-      );
-    }
-
-    // 获取campId
-    this.campId = this.apiKeyManager.isHudsonConfigured() 
-      ? this.apiKeyManager.getCampId() 
+    this.campId = this.apiKeyManager.isHudsonConfigured()
+      ? this.apiKeyManager.getCampId()
       : null;
 
-    // 创建API客户端
-    // 如果只有Hudson认证，使用空字符串作为API key
     const apiKey = this.apiKeyManager.getAPIKey();
-    const hudsonToken = this.apiKeyManager.isHudsonConfigured() 
-      ? this.apiKeyManager.getHudsonAccessToken() 
+    const hudsonToken = this.apiKeyManager.isHudsonConfigured()
+      ? this.apiKeyManager.getHudsonAccessToken()
       : undefined;
-    
-    if (!hudsonToken && !apiKey) {
-      throw new Error('At least one authentication method (API key or Hudson token) must be configured.');
-    }
 
     this.apiClient = new HTTPClient(apiKey, hudsonToken);
+
+    if (!this.apiKeyManager.hasAPIKey() && !this.apiKeyManager.isHudsonConfigured()) {
+      this.activeTools = getAuthToolDefinitions();
+      logger.info('MCP Server initialized in bootstrap auth mode', {
+        toolCount: this.activeTools.length,
+      });
+      return;
+    }
+
     await this.ensureRegionProfile('always');
     if (this.authError) {
       logger.warn('Hudson auth invalid at startup; tools will return AUTH_INVALID');
@@ -109,10 +120,10 @@ export class LukeyunMCPServer {
       const name = params.name as string;
       const args = (params.arguments as Record<string, unknown>) || {};
 
-      logger.info('Tool called', { tool: name, args });
+      logger.info('Tool called', { tool: name, args: redactToolArgs(name, args) });
 
       await this.ensureRegionProfile('ttl');
-      if (this.authError) {
+      if (this.authError && !isAuthToolName(name)) {
         return handleToolError(this.authError, { regionProfile: this.regionProfile }) as CallToolResult;
       }
 
@@ -138,6 +149,8 @@ export class LukeyunMCPServer {
         permissionChecker: this.permissionChecker,
         campId: this.campId || undefined,
         regionProfile: this.regionProfile,
+        applyHudsonSession: (accessToken, campId) => this.applyHudsonSession(accessToken, campId),
+        getHudsonAccessToken: () => this.apiKeyManager.getHudsonAccessToken(),
       };
 
       // 调用工具处理函数
@@ -160,12 +173,26 @@ export class LukeyunMCPServer {
     });
   }
 
+  private async applyHudsonSession(accessToken: string, campId: string): Promise<void> {
+    this.apiKeyManager.setHudsonCredentials(accessToken, campId);
+    this.campId = campId;
+    this.apiClient?.setHudsonAccessToken(accessToken);
+    writeStoredCredentials({ accessToken, campId });
+    this.authError = null;
+    this.profileExpiresAt = 0;
+    await this.ensureRegionProfile('always');
+  }
+
   /**
    * 海外店语言/时区/货币跟 Hudson 门店配置。
    * ListTools 每次重读；CallTool 默认 30s 缓存（REGION_PROFILE_TTL_MS）。
    */
   private async ensureRegionProfile(mode: 'always' | 'ttl'): Promise<void> {
     if (!this.apiClient) return;
+    if (!this.apiKeyManager.hasAPIKey() && !this.apiKeyManager.isHudsonConfigured()) {
+      this.activeTools = getAuthToolDefinitions();
+      return;
+    }
     const ttlMs = Number(process.env.REGION_PROFILE_TTL_MS || 30000);
     if (mode === 'ttl' && Date.now() < this.profileExpiresAt) {
       return;

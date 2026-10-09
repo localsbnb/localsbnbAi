@@ -78,7 +78,16 @@ Banding saluran dalam satu nafas. Tiada empat log masuk.
 
 **15:00, tukang bersih di koridor**  
 “Sekarang mana yang kosong dan bersih?”  
-Tak perlu bagi kata laluan. Anda tengok, anda beritahu.
+“Tanda 302 kotor.” / “Tanda bilik laut bersih.” *(kedai luar negara)*  
+Tak perlu bagi kata laluan. Anda tengok dan beritahu — atau tukar status bersih dalam sembang yang sama.
+
+**16:20, tetamu walk-in**  
+“Buat tempahan manual untuk Zhang, masuk malam ni, keluar Ahad, 1 dewasa.” *(kedai luar negara)*  
+Nampak sebut harga dulu. Anda sahkan. Baru pesanan wujud.
+
+**17:05, harga hujung minggu**  
+“Tetapkan kadar Airbnb ini kepada 100 untuk Jumaat dan Sabtu — tunjuk pratonton dulu.” *(kedai luar negara)*  
+Pratonton tarikh dan jumlah. Anda kata ya. Baru kalendar dikemas kini.
 
 **18:00, kumpulan pemilik**  
 “Minggu ni penghunian, harga purata, hasil?”  
@@ -99,15 +108,25 @@ Naikkan harga hujung minggu atau tidak — nampak minggu di depan mata, bukan ra
 **Hari pertama staf baharu**  
 Jangan belajar menu. Ingat tiga ayat: *siapa tiba hari ini, bilik hari ini, nombor minggu ini.*
 
-### Uruskan penginapan — kedai LocalsBnb luar negara sahaja
+### Buka kedai & sambung saluran — kedai LocalsBnb luar negara sahaja
 
-Anda boleh minta AI **daftar masuk, daftar keluar, lanjut, atau tukar bilik**.
+Hos baharu? Anda boleh **daftar atau log masuk dalam sembang** — e-mel, kod, kata laluan — tanpa mencari wizard pemasangan lain.
 
-Ia tak buat senyap-senyap. Sentiasa tunjuk tetamu dan tarikh dulu. Anda kata “itu dia.” Baru ia jalan.
+Sudah beroperasi? Kata **“Sambung Airbnb”** atau **“Sambung Booking / Trip / Agoda.”** LocalsBnb membuka halaman pelayar (telefon atau desktop). Siapkan langkah saluran di situ. Balik dan kata **“Selesai.”** AI menyemak pautan — tanpa meminta anda tampal ID hartanah.
+
+![Kata sambung. Siapkan dalam pelayar. Kata Selesai — AI sahkan saluran.](assets/localsbnb-channels.png)
+
+### Uruskan penginapan & kalendar — kedai LocalsBnb luar negara sahaja
+
+Anda boleh minta AI **daftar masuk, daftar keluar, lanjut, tukar bilik**, serta **tempahan manual, kemas kini harga saluran, tutup/buka bilik, dan tanda kotor/bersih**.
+
+Ia tak tulis senyap-senyap. Sentiasa tunjuk tetamu, tarikh, jumlah atau status bersih dulu. Anda kata “itu dia.” Baru ia jalan.
+
+![Akaun, tempahan, harga, bersih — sentiasa pratonton, anda sahkan, baru berlaku.](assets/localsbnb-ops.png)
 
 ![AI tunjuk tempahan dahulu. Anda sahkan. Baru berlaku.](assets/localsbnb-confirm.png)
 
-**Kalau kedai di China:** soalan “apa yang berlaku” semua boleh. **Daftar masuk, daftar keluar, lanjut dan tukar bilik belum ada di China.** Batal, tukar harga senarai, sync kalendar — masih dalam LocalsBnb.
+**Kalau kedai di China:** soalan “apa yang berlaku” semua boleh. **Daftar masuk/keluar/lanjut/tukar bilik, sambung saluran, tempahan manual, sunting harga dan tulis status bersih belum ada di China.** Batal atau sync kalendar — masih dalam LocalsBnb.
 
 ---
 
@@ -159,9 +178,14 @@ Malas cari menu? Beritahu AI:
 - “Tunjuk bilik hari ini.”  
 - “Harga Airbnb minggu ini.”  
 - “Minggu ni macam mana?”  
-- “Daftar masuk Maria — tunjuk tempahan dulu.” *(luar negara)*
+- “Tolong daftar LocalsBnb.” / “Log masuk.” *(luar negara)*  
+- “Sambung Airbnb.” / “Sambung Booking.” — kemudian “Selesai.” *(luar negara)*  
+- “Daftar masuk Maria — tunjuk tempahan dulu.” *(luar negara)*  
+- “Buat tempahan untuk Zhang, malam ni sampai Ahad.” *(luar negara)*  
+- “Tukar harga Jumaat–Sabtu — pratonton dulu.” *(luar negara)*  
+- “Tanda bilik 302 kotor.” / “Tanda bersih.” *(luar negara)*
 
-Jawapan ikut **bahasa hartanah** di LocalsBnb. Anda tak pilih Inggeris atau Jepun sekali lagi di sini.
+Jawapan ikut **bahasa hartanah** di LocalsBnb. Anda tak pilih Inggeris atau Jepun sekali lagi di sini. Halaman saluran boleh disiapkan di **telefon atau desktop**.
 
 ---
 

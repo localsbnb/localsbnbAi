@@ -1,4 +1,5 @@
 import { logger } from '../utils/logger.js';
+import { readStoredCredentials } from './credentialsStore.js';
 
 export class APIKeyManager {
   private apiKey: string | null = null;
@@ -15,6 +16,8 @@ export class APIKeyManager {
     this.scopes = scopesStr ? scopesStr.split(',').map((s) => s.trim()) : [];
     
     // Load app credentials (APP_SECRET / APP_ID)
+    // Direct-config path (unchanged): both env vars set → use them as-is; App Secret is sent
+    // without Bearer (see formatHudsonAccessTokenHeader). No /user/secret/generate in this path.
     this.hudsonAccessToken = process.env.APP_SECRET || process.env.HUDSON_ACCESS_TOKEN || null;
     this.campId = process.env.APP_ID || process.env.CAMP_ID || null;
 
@@ -24,11 +27,22 @@ export class APIKeyManager {
       logger.info('API key loaded from environment', { hasScopes: this.scopes.length > 0 });
     }
 
-    if (!this.hudsonAccessToken || !this.campId) {
-      logger.warn('APP_SECRET or APP_ID not found in environment variables');
-    } else {
+    if (this.hudsonAccessToken && this.campId) {
       logger.info('Hudson credentials loaded from environment');
+      return;
     }
+
+    if (!this.hudsonAccessToken && !this.campId) {
+      const stored = readStoredCredentials();
+      if (stored) {
+        this.hudsonAccessToken = stored.accessToken;
+        this.campId = stored.campId;
+        logger.info('Hudson credentials loaded from local credentials file');
+        return;
+      }
+    }
+
+    logger.warn('APP_SECRET or APP_ID not found; starting in bootstrap auth mode');
   }
 
   /**
