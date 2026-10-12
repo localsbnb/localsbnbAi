@@ -1,0 +1,11 @@
+**
+!package.json
+!tsconfig.json
+!src
+!src/**
+!deployment
+!deployment/remote
+!deployment/remote/Dockerfile
+!deployment/remote/npm-shrinkwrap.json
+!deployment/remote/migrations
+!deployment/remote/migrations/**

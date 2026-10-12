@@ -112,6 +112,9 @@ export async function checkInOrderOverseas(
   const profile = profileOf(context);
   const campId = requireCampId(context);
   const orderDetailIds = toIdList(args.orderDetailIds ?? args.orderDetailId);
+  if (context.remote && orderDetailIds.length !== 1) {
+    throw new MCPError(ErrorCode.INVALID_PARAMS, 'Remote check-in/check-out requires exactly one order detail per preview');
+  }
   if (!orderDetailIds.length) {
     throw new MCPError(ErrorCode.MISSING_PARAMS, 'orderDetailIds is required');
   }
@@ -127,6 +130,11 @@ export async function checkInOrderOverseas(
   ]
     .filter(Boolean)
     .join('\n');
+
+  if (context.remote) {
+    if (!previewHasIdentity(preview, profile.locale)) throw new MCPError(ErrorCode.INVALID_PARAMS, 'Cannot identify the stay; query exact booking details first');
+    return context.remote.preview({args,tool:'check_in_order',endpoint:'/bnbOrderDetails/checkIn',payload:{campId,orderDetailIds},summary:preview,snapshot:preview});
+  }
 
   if (!isConfirmed(args)) {
     return textResult(`${preview}\n\n${t(profile.locale, 'confirm.need')}`);
@@ -151,6 +159,9 @@ export async function checkOutOrderOverseas(
   const profile = profileOf(context);
   const campId = requireCampId(context);
   const orderDetailIds = toIdList(args.orderDetailIds ?? args.orderDetailId);
+  if (context.remote && orderDetailIds.length !== 1) {
+    throw new MCPError(ErrorCode.INVALID_PARAMS, 'Remote check-in/check-out requires exactly one order detail per preview');
+  }
   if (!orderDetailIds.length) {
     throw new MCPError(ErrorCode.MISSING_PARAMS, 'orderDetailIds is required');
   }
@@ -166,6 +177,11 @@ export async function checkOutOrderOverseas(
   ]
     .filter(Boolean)
     .join('\n');
+
+  if (context.remote) {
+    if (!previewHasIdentity(preview, profile.locale)) throw new MCPError(ErrorCode.INVALID_PARAMS, 'Cannot identify the stay; query exact booking details first');
+    return context.remote.preview({args,tool:'check_out_order',endpoint:'/bnbOrderDetails/checkOut',payload:{campId,orderDetailIds},summary:preview,snapshot:preview});
+  }
 
   if (!isConfirmed(args)) {
     return textResult(`${preview}\n\n${t(profile.locale, 'confirm.need')}`);
@@ -280,6 +296,12 @@ export async function extendOrderOverseas(
     .filter(Boolean)
     .join('\n');
 
+  if (context.remote) {
+    if (!previewHasIdentity(preview, profile.locale)) throw new MCPError(ErrorCode.INVALID_PARAMS, 'Cannot identify the stay; query exact booking details first');
+    if (shouldQuote && !quote) throw new MCPError(ErrorCode.API_ERROR, 'Quote unavailable; do not proceed with this extension');
+    return context.remote.preview({args,tool:'extend_order',endpoint:'/bnbOrder/extend',payload:{campId,previousOrderId,nights,roomId,paid},summary:preview,snapshot:preview});
+  }
+
   if (!isConfirmed(args)) {
     return textResult(`${preview}\n\n${t(profile.locale, 'confirm.need')}`);
   }
@@ -328,6 +350,11 @@ export async function arrangeRoomOverseas(
   ]
     .filter(Boolean)
     .join('\n');
+
+  if (context.remote) {
+    if (!previewHasIdentity(preview, profile.locale)) throw new MCPError(ErrorCode.INVALID_PARAMS, 'Cannot identify the stay; query exact booking details first');
+    return context.remote.preview({args,tool:'arrange_room',endpoint:'/bnbOrderDetail/arrangeRoom',payload:{campId,orderDetailId,roomId},summary:preview,snapshot:preview});
+  }
 
   if (!isConfirmed(args)) {
     return textResult(`${preview}\n\n${t(profile.locale, 'confirm.need')}`);

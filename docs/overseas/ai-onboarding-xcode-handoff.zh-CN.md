@@ -1,48 +1,55 @@
 # 海外 AI Onboarding 交接（给 Xcode）
 
-> 读者：Xcode（后续跟进）  
-> 更新日期：2026-10-09  
-> 仓库：MCP `localsbnbAi`；海外 PC `overseas/localsbnb`  
-> 目标环境：**hudson-dev** + `https://overseas-dev.localhome.cn`；**S06 已完成：2026-10-08 17:31（北京时间）经 Cursor 宿主 `start_handshake` 返回 HTTPS 开链，17:43 用户确认浏览器到达 Airbnb 授权页**（见第 0.8 节）。真实 Airbnb 账号验收继续暂缓。MCP 改动仍未提交。
+**当前 M 进度（2026-10-10）：M04–M06 已实现并完成本机自动化，现到 M07 统一人工验收准备。** 独立 Docker MCP、PostgreSQL、Redis 已启动；254 项 MCP 离线测试、两种本地 stdio 握手、真实存储业务流程通过；PC 60 项 AI 测试与完整 dev 构建通过。真实 Hudson 业务使用替身，未做平台真连/手机/渠道授权。原本地部署方式保留。下一步按 [M07 验收清单](./remote-mcp-m07-acceptance.zh-CN.md) 准备域名、客户端与测试账号后统一验收；部署命令见[运行说明](../../deployment/remote/README.md)。
+
+代码在 MCP/PC 工作区，未提交或部署公网。新账号无已有 Secret 时的幂等开通仍待 Hudson 补充；现有 Secret 不重置。M08/M09 尚未开始。
+
+> 读者：Xcode（后续跟进）
+> 更新日期：2026-10-10
+> 仓库：MCP `localsbnbAi`；海外 PC `overseas/localsbnb`
+
+> 目标环境：**hudson-dev** + `https://overseas-dev.localhome.cn`；**S06 已完成：2026-10-08 17:31（北京时间）经 Cursor 宿主 `start_handshake` 返回 HTTPS 开链，17:43 用户确认浏览器到达 Airbnb 授权页**（见第 0.8 节）。真实 Airbnb 账号验收继续暂缓。当前提交与本次收尾证据见第 0.13 节。
 
 本文是跟进入口。方案细节见 [ai-onboarding-ops-plan.zh-CN.md](./ai-onboarding-ops-plan.zh-CN.md)，安装见 [getting-started.zh-CN.md](./getting-started.zh-CN.md)。
 
 <a id="execution-progress"></a>
 
-## 当前执行位置（接手先看，2026-10-09）
+## S 系列收尾记录（2026-10-09 历史快照；当前 M 进度见顶部）
 
-**S08 / S09 人工验收已通过（2026-10-09）。** S09 含真实写入与回查；S08 流程通过但**暂无真实渠道账号**做完整真连。AI 唤起页移动端与六语文案已在海外 PC + MCP 落地（见第 0.12 节）。MCP 工作区仍未提交/发布；海外 PC 移动端改动待该仓库提交并发布到 overseas-dev。S07 暂停；S05/S06 保持通过；S10 仍暂缓。下一棒优先：整理并提交 MCP，并发布海外 PC 移动端改动。
+**旧流程本轮收尾完成（2026-10-09 16:22，北京时间）：PC 41 项回归、完整 dev 构建通过；MCP 类型检查与 138 项离线测试通过；海外 dev 真实 ticket、Cookie、绑定门店初始化与历史 prod 环境隔离验证通过。** 详见第 0.13 节。旧流程已收尾；用户随后已启动 M 系列：本地 Docker PostgreSQL/Redis 已运行，M02 模拟 HTTP 和 M03 授权码、加密授权存储、令牌轮换/撤销验证通过；OAuth 令牌 HTTP/发现路由组件及原本地 stdio 两种入口兼容性测试通过；登录同意与完整服务入口待接入。最新进展见 [M 计划](./remote-mcp-multiplatform-plan.zh-CN.md)。
 
-- **当前验证步骤：S09 人工验收通过；S08 通过（无真实渠道账号）；移动端布局 DevTools 375 已过。** 详见第 0.11 / 0.12 节与 [验收用例](./s08-s09-acceptance.zh-CN.md)。
-- **当前开发：S08、S09 + 脏净房 + AI 唤起页移动端。** 渠道连接/查询/映射，改价/开关房/录单/脏净房，以及开链页窄屏与六语已接入。详见第 0.10–0.12 节。
-- **S07 状态：按用户要求暂停。** Redis 提案仍待审核，未修改 ticket 状态机或共享存储。待用户恢复此步骤后再继续。
-- **暂缓项：S10；S08 真连账号；移动端真机联调。** Airbnb / Booking/Trip/Agoda 真实渠道账号与真机 Safari/Chrome 补测不阻塞提交。
-- **追加修复：Handshake API 环境一致性。** `/camps/get` 的 `COMMON_PERMISSION_DENIED` 仍为独立待办；证据见第 0.9 节。
-- **体验补齐：AI 唤起页移动端。** 须在手机浏览器可用；文案六语（en/zh-CN/zh-TW/ja/th/ms）。详见第 0.12 节。
+- **已提交代码：** MCP `main / 8ca70e3`，版本 `1.0.17`；PC `dev / 821ef05`。与本机缓存的远端跟踪引用一致，本轮未 fetch；npm registry 发布结果未复核。
+- **S08/S09：** 人工验收已通过；S08 暂无真实渠道账号，S09 包含真实写入与脏净房，沿用第 0.11 节记录，本轮未重复业务写入。
+- **Airbnb 简化流程：** 打开前记录房源快照；网页完成授权和导入后只回复“已完成”；无参数 poll 比较 POI/房型映射，账号或同步时间变化不单独算成功。已提交，真实 OAuth/导入仍待账号。
+- **登录态与初始化：** 浏览器 Cookie 和门店绑定保留；AI 使用 `/camp/get` 与 `/systemConfigs/get`，两接口线上业务成功，未调用 `/camps/get`。这是 AI 初始化路径修复，不代表放宽了 `/camps/get` 的权限。
+- **继续暂停：** S07 Redis/共享存储、ticket 一次性消费与严格完成状态关联；S10 Airbnb 真连、S08 完整真连及移动端真机验收等待测试资源。
+- **下一步：** 具备测试账号后补真实渠道验收；M 系列已启动，当前继续服务端登录桥接和完整 OAuth 开发。参见 [M01–M09 计划](./remote-mcp-multiplatform-plan.zh-CN.md)。
 
 状态含义：**已完成**只覆盖本行明确的范围；**待执行**已有实现、仍需操作；**待开发**代码尚未完成；**暂缓**保留验收任务。测试通过、提交、发布、在线验收分别记录。
 
 | 步骤 | 要完成的工作 | 当前状态 | 完成依据 / 尚缺什么 |
 |------|--------------|----------|---------------------|
-| S01 | P0 注册、登录、MFA、App Secret 落盘及 MCP bootstrap | 已完成实现，未提交 | MCP 类型检查和相关 39 项测试通过；历史记录含 hudson-dev 联调。本行 P0/P1 原始范围见第 0.2 节；当前全工作区含新增 S08/S09 及验收用例文档，共 37 个修改/新增文件 |
+| S01 | P0 注册、登录、MFA、App Secret 落盘及 MCP bootstrap | 已实现并提交 | MCP `9f31247` 包含相关实现，`8ca70e3` 升级至 1.0.17；当前验证见 0.13 |
 | S02 | P1 PC Handshake 基础代码、编译修复及 dev 发布 | 已完成 | `9c3ab4a` 基础实现、`8407864` 编译修复，已合入 `dev / 64f3cef`；用户确认发布，接口已恢复 |
 | S03 | 发布后复测 create、ticket、HTTPS 页面 Cookie | 已完成接口检查 | 无凭证 400、真实 ticket 200、HTTPS 页面 Cookie 与门店匹配；发现原始 openUrl 为 HTTP |
 | S04 | 修复原始 openUrl 的 HTTPS 协议并本地验证 | 已完成 | PC 3 个文件改动，13 项回归测试及完整 dev 构建通过；现已由 `4d0fd73` 提交 |
 | S05 | 提交发布 S04 修复，验证原始链接直接为 HTTPS | 已完成 | 用户确认发布；2026-10-08 09:56 原始 openUrl 为 HTTPS，新 ticket 页面 200，Cookie / campId 匹配 |
-| S06 | 经实际 MCP 宿主验证 Handshake 工具，开链到达 Airbnb 授权页 | **已完成，最近完成步骤** | 2026-10-08 17:31 Cursor 宿主工具列表含四个 Handshake 工具；`start_handshake` 返回 HTTPS（主机 overseas-dev），17:43 用户确认浏览器到达授权页。未授权、未导入。源码仍基于 `f9e040c` 未提交，无新提交号 |
-| S07 | P1 ticket 一次性消费、状态关联、共享存储与权限 | **暂停：用户明确要求** | 原有缺口及 Redis 提案保留；本轮不推进此步骤 |
-| S08 | P2 Booking / Trip / Agoda 渠道连接 | **人工验收通过；暂无真实渠道账号；未提交/发布** | 开浏览器页/“已完成”核对流程与工具验收通过；完整真连待有测试渠道账号后补齐；移动端见 0.12 |
-| S09 | P3 改价、开关房、手工录单（含脏净房） | **人工验收通过（含真实写入）；未提交/发布** | 预览确认、写入与回查在 hudson-dev / overseas-dev 通过；另验 `update_room_clean_state`；详见第 0.11 节 |
-| S10 | 真实 Airbnb OAuth → poll → listing 预览 → 确认导入 | **暂缓验收** | 无可授权账号；账号可用后补齐，不标记通过，不阻塞继续编码 |
-| 体验 | AI 唤起页移动端 + 六语 | **代码已落地；DevTools 375 通过；真机待补；PC 待发布** | viewport、BookingLink/Airbnb 窄屏、AI 回调轻量壳、六语文案；详见第 0.12 节 |
+| S06 | 经实际 MCP 宿主验证 Handshake 工具，开链到达 Airbnb 授权页 | **已完成，最近完成步骤** | 2026-10-08 17:31 Cursor 宿主工具列表含四个 Handshake 工具；`start_handshake` 返回 HTTPS（主机 overseas-dev），17:43 用户确认浏览器到达授权页。未授权、未导入。当时源码基于 `f9e040c` 未提交；当前代码已提交，见 0.13 |
+| S07 | P1 ticket 一次性消费、状态关联、共享存储与权限 | **原 S 路径暂停** | M05/M06 已在独立远程路径实现对应能力；旧本地 `/ai/handshake` 保持兼容 |
+| S08 | P2 Booking / Trip / Agoda 渠道连接 | **已提交；人工验收通过；暂无真实渠道账号** | 开浏览器页/“已完成”核对流程与工具验收通过；完整真连待有测试渠道账号后补齐；移动端见 0.12 |
+| S09 | P3 改价、开关房、手工录单（含脏净房） | **已提交；人工验收通过（含真实写入）** | 预览确认、写入与回查在 hudson-dev / overseas-dev 通过；另验 `update_room_clean_state`；详见第 0.11 节 |
+| S10 | 真实 Airbnb OAuth → 网页导入/关联 → 回复已完成 → poll 核对 | **暂缓验收** | 无可授权账号；账号可用后补齐，不标记通过，不阻塞继续编码 |
+| 体验 | AI 唤起页移动端 + 六语 | **已提交；DevTools 375 通过；真机待补** | viewport、BookingLink/Airbnb 窄屏、AI 回调轻量壳、六语文案；详见第 0.12 节 |
 
-**当前仓库落点：** MCP 最近核查为 `main / f9e040c`，交接与方案文档本身也未跟踪；当前共 37 个文件：13 个已跟踪文件修改、24 个未跟踪新文件；包括 Redis 提案与本轮 5 个新模块、3 个测试文件。PC 为 `dev / 9e4a367`，第 0.9 节的 2 个文件已提交，本次提交后工作区干净；已推送 origin/dev，线上环境隔离已验证，初始化权限问题待处理。当前 MCP 包版本仍为 `1.0.15`，不能据此认为公开 npm 包包含工作区新功能。本次未 fetch，远端信息仅来自本机缓存。
+**当前仓库落点：** MCP `main / 8ca70e3`（1.0.17）、PC `dev / 821ef05`；本轮开始时业务代码工作区均干净。本轮只更新文档，未 commit/push。线上包含会话与初始化修复且实际行为通过；未读取 Jenkins 构建号，不能声称精确部署 SHA 已由流水线证实。
 
 每个待执行步骤的操作、完成标准及需要记录的证据见[第 7 节](#execution-steps)。第 0 节保留历史过程，用于追溯；其中旧提交位置、工作区状态与 404 记录不覆盖本节当前状态。
 
 ---
 
-## 0. 接手核查快照（2026-10-06）
+## 0. 接手核查与后续验证
+
+> 0.1–0.12 保留各时间点历史记录；其中“未提交”“待发布”“账号变化判定”等旧描述不代表当前状态。最新结论以顶部与 0.13 为准。
 
 本节区分 Git 已提交、工作区实现、历史联调记录和本次实测。Git 信息来自本机分支及已缓存的远端跟踪引用，本次未 fetch，也未 commit / push。本文及方案文档自身仍是未跟踪文件，换机器仅拉 Git 不会获得当前 MCP P0/P1 实现。
 
@@ -268,6 +275,33 @@ flowchart LR
 
 **手测回填（2026-10-09）：** DevTools 375 布局检查已通过（viewport / 主 CTA / 无整页横溢）；真机 Safari/Chrome 与完整渠道账号联调仍待有测试资源时补测。桌面 ≥1280 未做破坏性回退。渠道详情宽表仍横滚（P2，操作列可滑到）。**海外 PC 改动尚未提交/发布到 overseas-dev**，线上需发布后方可对真实用户生效。
 
+### 0.13 旧流程收尾验收（2026-10-09 16:22，北京时间）
+
+**代码证据：** MCP `9f31247` 已提交 P0/P1、S08/S09 及后续修复，`8ca70e3` 将版本改为 1.0.17；PC `821ef05` 包含移动端、`handshakeSession.ts`、`initializeHandshakeSession.ts`、Cookie 及回调导入流程。两仓库与本机远端跟踪引用一致，本轮未 fetch、提交或推送。npm 是否公开发布本轮未查询。
+
+**本地验证：** Node 22.23.2。PC `npm test -- --runInBand --watchman=false __tests__/lib/ai`：4 套件 **41 项通过**；`NEXT_PUBLIC_API_ENV=dev NEXT_TELEMETRY_DISABLED=1 npm run build` 完整通过（仍有项目现存 lint 警告）。覆盖 Cookie 保留/清除/过期、环境隔离、绑定门店初始化与错误门店拒绝。MCP `npm run type-check` 与 10 套件 **138 项离线测试通过**，排除 `overseas.live.test.ts`、`overseas.smoke.test.ts`。未重建 MCP dist 或重启宿主，测试结论针对当前源码。
+
+**线上验证：** 沿用用户授权读取本机凭证，只向 overseas-dev 创建 1 个真实短期 ticket；使用独立无头 Chrome 上下文，预置 `localsbnb_api_env=prod`。所有 Airbnb 导航拦截为 204；只放行 Hudson dev 的 `/camp/get`、`/camps/get`、`/systemConfigs/get` 与 OPTIONS，其他 Hudson 请求拦截。
+
+| 检查 | 结果 |
+|---|---|
+| create 与开链 | create HTTP 200 / success=true；原始 openUrl 为 HTTPS overseas-dev；页面 200 |
+| Cookie | auth token 与本机凭证匹配、expiry 有效、AI camp Cookie 与 ticket 门店一致；不记录值 |
+| 线上代码 | 实际页面 JS 含 `localsbnb_ai_camp_id` 和绑定门店初始化校验逻辑 |
+| AI 初始化 | `/camp/get`、`/systemConfigs/get` 均 HTTP 200、success=true；请求 token/camp 与 ticket 匹配 |
+| 旧错误路径 | 没有 `/camps/get` 请求；没有 Hudson prod 请求或错误环境拦截事件 |
+| 后续页面 | 使用同一上下文打开 `/channel/airbnb/callback`（不带 code/state），Cookie 与门店绑定仍保留；再次初始化两接口均成功 |
+| 历史环境 | localStorage 仍为 prod，实际初始化请求保持 Hudson dev |
+| 授权与写入 | 未执行真实 Airbnb 授权、换码、导入、改价、订单或渠道写入 |
+
+后续页面不带 OAuth 参数，仅用于验证会话持久与路由外环境隔离，不代表回调成功。`/traceLog`、`/actionExec/express` 和 `/ota/im/thread/page/get` 被测试白名单拦截，这些功能本轮不作验收结论。ticket 过期后的 Cookie 保留由单测覆盖，本轮线上未等待 25 分钟。
+
+**部署结论：** 线上确实包含并执行本次登录态/门店初始化修复，行为检查通过；未获取 Jenkins 构建号或服务器提交 SHA，不把静态特征等同于完整 `821ef05` 所有改动均在线验收。
+
+**当前 Airbnb 交互：** start 先记录房源快照，再开浏览器；用户在网页完成授权与导入/映射后只回复“已完成”；poll 可无参数，按门店、凭证和站点绑定查本地流程，比较 POI/房型变化。未变化/未关联完成返回 pending，异常返回 needs_action，核对成功返回 succeeded。当前流程本地记录仍按 ticket 期限有效，过期需重新开始；浏览器登录 Cookie 有独立期限，不因流程记录过期自动清除。普通重新登录或登出会清除 AI 门店绑定。
+
+**剩余边界：** 真实 Airbnb 授权→网页导入→poll，Booking/Trip/Agoda 完整真连及真机 Safari/Chrome 等待资源。Redis、一次性消费和 ticket 严格状态机继续暂停。本轮旧流程可执行的三项收尾已完成，M 开发尚未启动。
+
 ## 1. 当前结论（先看这里）
 
 | 项 | 状态 |
@@ -280,9 +314,9 @@ flowchart LR
 | Airbnb 官网授权 | **暂缓验收**：缺少可授权账号，用户同意不阻塞后续开发；不视为真连通过 |
 | MCP 进程里出现 `start_handshake` | **S06 已完成**：Cursor 宿主已暴露 Handshake 工具（当前服务名 `Locals Overseas`） |
 | S08 / S09 | **人工验收通过**（S08 暂无真实渠道账号；S09 含真实写入与脏净房） |
-| AI 唤起页移动端 | **代码已落地**；DevTools 375 通过；真机与 overseas-dev 发布待补 |
+| AI 唤起页移动端 | **已提交**；DevTools 375 通过；线上会话验证见 0.13，真机待补 |
 
-下一棒优先：**提交 MCP 工作区，并提交/发布海外 PC 移动端改动。** S07 暂停，[Redis 提案](./ai-handshake-redis-proposal.zh-CN.md) 保持待审核；第 0.9 节初始化权限问题保留。S08 真连账号与 S10 Airbnb 账号到位后补测。
+下一棒：旧流程收尾已完成（0.13）；有账号后补 S08/S10 真连，有真机后补移动端验收。Redis 与严格 ticket 流程继续暂停；M 系列等待新一轮启动。
 
 ---
 
@@ -365,7 +399,7 @@ flowchart LR
 | `src/config/tools.ts` | **仅 `region===overseas`（`isBnb===1`）才挂 Handshake / S08 / S09 工具** |
 | `src/client/httpClient.ts` | 按 token 类型写 header；写请求关闭自动重试 |
 
-### 海外 PC（`overseas/localsbnb`；Handshake HTTPS 已验证；移动端改动待提交发布）
+### 海外 PC（`overseas/localsbnb`；Handshake HTTPS 已验证；821ef05 已提交；线上会话验收见 0.13）
 
 | 路径 | 作用 |
 |------|------|
@@ -409,12 +443,12 @@ Airbnb `redirect_uri`（不能按请求改）：
 - [x] API 环境隔离：历史 `prod` 配置下，Handshake 初始化请求仍访问 Hudson dev（`9e4a367`，21:50 实测）
 - [x] S08 渠道连接流程与工具人工验收通过（暂无真实渠道账号完整真连，2026-10-09）
 - [x] S09 改价/开关房/录单/脏净房真实写入与回查通过（2026-10-09）
-- [x] AI 唤起页移动端代码落地 + DevTools 375 布局检查（viewport / 主 CTA；真机待补，海外 PC 待发布）
-- [ ] AI 初始化权限：`/camps/get` 返回 `COMMON_PERMISSION_DENIED`，尚未解决；不能用开链通过代替初始化成功
-- [ ] Airbnb 回调换码成功，对话 `poll_handshake` 出现新 `accountId`（缺少真实账号，用户同意暂缓，不阻塞开发）
-- [ ] `import_airbnb_listings` 预览后再 `confirm=true`（同上，暂缓实测）
+- [x] AI 唤起页移动端代码落地 + DevTools 375 布局检查（viewport / 主 CTA；真机待补，线上会话验证见 0.13）
+- [x] AI 绑定门店初始化：线上 `/camp/get`、`/systemConfigs/get` 成功且不调用 `/camps/get`（0.13）
+- [ ] Airbnb 回调换码、网页导入/关联后，无参数 `poll_handshake` 确认房源/房型变化（缺少真实账号，用户同意暂缓，不阻塞开发）
+- [ ] 高级纯对话导入（用户明确需要时）：`import_airbnb_listings` 预览再确认；默认网页导入后不重复调用（暂缓实测）
 - [ ] 移动端真机 Safari/Chrome + Booking/Trip/Agoda 真实账号联调
-- [ ] 海外 PC 移动端改动提交并发布到 overseas-dev
+- [x] 海外 PC `821ef05` 已提交；线上会话和初始化修复检查通过，完整移动端真机仍待测
 - [x] Cursor 宿主工具列表出现四个 Handshake 工具（本次调用成功；工具能挂载表示门店已被识别为海外）
 - [ ] 多实例 / 负载均衡下 ticket 仍能 create → open（见下一节）
 
@@ -422,18 +456,18 @@ Airbnb `redirect_uri`（不能按请求改）：
 
 ## 6. 已知问题（跟进时优先）
 
-**保留待办：AI 初始化权限失败。** 环境隔离已在线修复，但 `/camps/get` 在 Hudson dev 返回 `COMMON_PERMISSION_DENIED`。需核对 App Secret 权限与 ticket 门店初始化流程，详见第 0.9 节。尚未确认具体权限原因，不改成“凭证无效”或“已全部通过”。
+**AI 初始化路径已修复并在线验证（0.13）。** 使用绑定门店接口成功，避免 App Secret 调用用户级 `/camps/get`；没有修改该接口权限契约。
 
-0. **create 返回 HTTP openUrl：已解决**  
+0. **create 返回 HTTP openUrl：已解决**
    编译失败、接口 404 及返回 HTTP 链接的问题均已解决；S05 于 2026-10-08 在线复测通过，见第 0.7 节。
 
-1. **Handshake 工具可能不出现**  
+1. **Handshake 工具可能不出现**
    `getActiveToolDefinitions` 只在海外 profile 注册 Handshake。若 `/camp/get` 失败或 `isBnb!==1`，Cursor 里只有查询工具。联调时先看 `POST /camp/get` 的 `isBnb`。
 
-2. **Ticket 存在 PC 进程临时文件**  
+2. **Ticket 存在 PC 进程临时文件**
    `lib/ai/handshakeStore.ts` 默认 `os.tmpdir()/localsbnb-ai-handshakes.json`。overseas-dev 若多机或无持久盘，**create 与打开 Handshake 页可能不在同一实例**，表现为 ticket 过期/找不到。发版后若 404/expired，优先改成 Redis / Hudson / 共享存储。
 
-3. **`poll_handshake` 看的是渠道账号列表变化**，不是 ticket 状态机。无 Airbnb 账号时不要用 poll 当失败依据；账号后台同步变化也可能误判成功（见第 0.3 节）。
+3. **`poll_handshake` 当前比较 POI/房型映射变化**，不是 PC ticket 状态机。账号及同步时间单独变化不会判成功；其他操作者造成的同门店变化仍可能被观察到，真实验收避免并发操作。
 
 4. **改 dist 必须重启 MCP**。未重启时即使用本机脚本调 PC Handshake，Cursor 工具列表也不会变。Cursor 可能缓存旧工具 schema；改名服务（如 `Locals Overseas`）或新开 Agent 对话可强制刷新。
 
@@ -447,7 +481,7 @@ Airbnb `redirect_uri`（不能按请求改）：
 
 ## 7. 后续执行步骤与完成标准
 
-S01–S06 的实现、测试和发布证据见上方进度表及第 0 节。S06 开链验证已完成；S08/S09 人工验收已通过（见第 0.11 节）；AI 唤起页移动端代码已落地（见第 0.12 节）。按用户要求暂停 S07。下一棒为提交 MCP 与发布海外 PC 移动端。第 0.9 节权限问题仍未解决。
+S01–S06 的实现、测试和发布证据见上方进度表及第 0 节。S06 开链验证已完成；S08/S09 人工验收已通过（见第 0.11 节）；AI 唤起页移动端代码已落地（见第 0.12 节）。按用户要求暂停 S07。当前旧流程收尾已完成，见 0.13；真实渠道验收待资源，M 系列尚未启动。
 
 ### S05 · 发布 HTTPS 修复并复测【已完成：2026-10-08】
 
@@ -484,25 +518,25 @@ S01–S06 的实现、测试和发布证据见上方进度表及第 0 节。S06 
 
 **完成标准：** ticket 不可重复消费，成功/失败结果可准确关联，凭证和门店隔离，多实例验证有明确证据。**回填：** 实现范围、存储方案、相关提交、测试结果和仍待上线验收项。此步骤不要求先取得真实 Airbnb 账号，可用模拟回调验证本地逻辑。
 
-### S08 · P2 渠道连接【人工验收通过；暂无真实渠道账号；待提交】
+### S08 · P2 渠道连接【人工验收通过；暂无真实渠道账号；已提交】
 
 默认使用 `start_channel_connection` 打开**浏览器页面**（手机或桌面）并记录前置快照；用户仅回复“已完成”，调用 `complete_channel_connection` 自动比较并核对。高级连接/查询/映射工具保留，但正常流程不再要求用户提供编号或在对话逐步映射。开链页移动端要求见第 0.12 节。
 
-**剩余步骤：** 提交 MCP；发布海外 PC 移动端；有 Booking/Trip/Agoda 测试渠道账号后补完整真连与映射回查（含真机）。
+**剩余步骤：** 有 Booking/Trip/Agoda 测试渠道账号后补完整真连与映射回查（含真机）；不再重复安排已完成的代码提交。
 
-**完成标准（已达成部分）：** 流程与工具宿主验收通过；窄屏布局代码已落地。**未达成：** 三渠道真实账号端到端真连（用户确认暂无账号）；真机手测与 overseas-dev 发布。
+**完成标准（已达成部分）：** 流程与工具宿主验收通过；窄屏布局代码已落地。**未达成：** 三渠道真实账号端到端真连（用户确认暂无账号）；真机手测与真实渠道线上端到端验收。
 
-### S09 · P3 运营写工具【人工验收通过；待提交】
+### S09 · P3 运营写工具【人工验收通过；已提交】
 
 已实现 `update_channel_prices`、`close_rooms`、`open_rooms`、`update_room_clean_state`、`create_manual_order`。金额用分；改价与开关房日期为闭区间，录单退房日不占房。每次仅操作一个价格方案/房间，录单只支持单房日租。所有写操作都需要 `previewId` + `confirm=true`，预览过期或资源/报价变化必须重新确认；取消订单仍不在范围内。
 
-**剩余步骤：** 提交 MCP 工作区。
+**剩余步骤：** 本轮无新增业务开发；代码已提交，npm registry 发布本轮未复核。
 
 **完成标准：** 预览不写入、确认只提交一次，hudson-dev 真实结果可回查——**用户确认已通过**（见第 0.11 节）。脏净房 `update_room_clean_state` 已在测试门店验过脏房/净房。
 
 ### S10 · 真实 Airbnb 端到端验收【暂缓，不阻塞后续开发】
 
-可用账号到位后，依次完成浏览器官网授权 → 回调成功 → 对话 `poll_handshake` 返回对应账号 → listing 预览 → 用户选定并确认导入 → 回查导入结果。记录失败位置和脱敏响应，不输出真实令牌或完整 ticket 链接。
+可用账号到位后，依次完成浏览器官网授权 → 回调后进入导入界面 → 用户选定房源完成导入/关联 → 回到对话回复“已完成” → 无参数 `poll_handshake` 核对本次 POI/房型映射变化；不得重复导入。记录失败位置和脱敏响应，不输出真实令牌或完整 ticket 链接。
 
 **完成标准：** 有真实账号上的完整闭环证据。此前的 mock 测试、接口可达和 Cookie 检查均不能单独将 S10 标为通过。
 

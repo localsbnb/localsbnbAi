@@ -86,6 +86,7 @@ export async function previewOrExecute(
   snapshot: unknown = summary,
   readBack?: (data: unknown) => Promise<unknown>
 ): Promise<ToolResult> {
+  if (context.remote) return context.remote.preview({args, tool, endpoint, payload, summary, snapshot, readBack});
   if (args.confirm !== undefined && typeof args.confirm !== 'boolean')
     invalid('confirm must be a boolean');
   const profile = profileOf(context);

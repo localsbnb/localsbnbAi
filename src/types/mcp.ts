@@ -6,6 +6,8 @@ export interface ToolHandler {
 }
 
 export interface ToolContext {
+  /** 仅远程模式注入；本地确认逻辑维持原路径。 */
+  remote?: { preview: (input: {args: Record<string, unknown>; tool: string; endpoint: string; payload: Record<string, unknown>; summary: unknown; snapshot: unknown; readBack?: (data: unknown) => Promise<unknown>}) => Promise<ToolResult> };
   apiClient: APIClient;
   logger: Logger;
   permissionChecker: PermissionChecker;

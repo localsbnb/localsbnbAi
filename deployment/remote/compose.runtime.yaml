@@ -1,0 +1,30 @@
+# Optional service overlay. Existing storage-only and local stdio commands are unchanged.
+services:
+  mcp:
+    build:
+      context: ../..
+      dockerfile: deployment/remote/Dockerfile
+    image: localsbnb-mcp-remote:local
+    env_file:
+      - .env.runtime.local
+    environment:
+      LOCALSBNB_REMOTE_DATABASE_URL: postgresql://localsbnb_mcp:${MCP_LOCAL_DB_PASSWORD:?Set password}@postgres:5432/localsbnb_mcp
+      LOCALSBNB_REMOTE_REDIS_URL: redis://:${MCP_LOCAL_REDIS_PASSWORD:?Set password}@redis:6379
+      LOCALSBNB_REMOTE_BIND_HOST: 0.0.0.0
+      LOCALSBNB_REMOTE_PORT: "8787"
+    ports:
+      - "127.0.0.1:${MCP_LOCAL_HTTP_PORT:-8787}:8787"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('node:http').get({host:'127.0.0.1',port:8787,path:'/readyz',headers:{Host:new URL(process.env.LOCALSBNB_REMOTE_PUBLIC_ORIGIN).host}},r=>{r.resume();process.exit(r.statusCode===200?0:1)}).on('error',()=>process.exit(1)).setTimeout(4000,function(){this.destroy()})"]
+      interval: 10s
+      timeout: 5s
+      retries: 3

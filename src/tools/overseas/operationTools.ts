@@ -1,6 +1,8 @@
 import type { ToolDefinition, ToolHandler } from '../../types/mcp.js';
 import { handleToolError, ErrorCode, MCPError } from '../../utils/errorHandler.js';
-import { startChannelConnection, completeChannelConnection } from './channelConnectionFlow.js';
+// 本地开浏览器模块按需加载，远程复用业务定义不加载本地凭证/配置。
+const startChannelConnection: ToolHandler = async (a,c) => (await import('./channelConnectionFlow.js')).startChannelConnection(a,c);
+const completeChannelConnection: ToolHandler = async (a,c) => (await import('./channelConnectionFlow.js')).completeChannelConnection(a,c);
 import { connectChannelPoi, mapChannelListing, queryChannelConnection } from './channels.js';
 import {
   changeRoomAvailability,

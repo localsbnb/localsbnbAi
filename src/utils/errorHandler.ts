@@ -1,6 +1,5 @@
 import { ZodError } from 'zod';
 import type { ToolResult } from '../types/mcp.js';
-import { logger } from './logger.js';
 import { t, type AppLocale } from '../region/i18n.js';
 
 /** 无权限时的规范话术（与产品文档一致） */
@@ -265,14 +264,15 @@ export class MCPError extends Error {
 
 export function handleToolError(
   error: unknown,
-  context?: { regionProfile?: { region?: string; locale?: AppLocale } }
+  context?: { regionProfile?: { region?: string; locale?: AppLocale }; remote?: unknown }
 ): ToolResult {
   const locale = context?.regionProfile?.region === 'overseas' ? context.regionProfile.locale : undefined;
-  return handleError(error, locale);
+  return handleError(error, locale, !!context?.remote);
 }
 
-export function handleError(error: unknown, locale?: AppLocale): ToolResult {
-  logger.error('Tool execution error', error instanceof Error ? error : new Error(String(error)));
+export function handleError(error: unknown, locale?: AppLocale, remote = false): ToolResult {
+  // 延迟加载本地 logger，复用纯业务处理器时不触发本地 dotenv。
+  if (!remote) void import('./logger.js').then(({ logger }) => logger.error('Tool execution error', error instanceof Error ? error : new Error(String(error)))).catch(() => undefined);
 
   if (error instanceof MCPError) {
     const friendlyMessage = getFriendlyMessage(error.code, error.details, locale);

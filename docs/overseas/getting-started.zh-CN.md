@@ -63,7 +63,7 @@ Google 登录尚未支持。Airbnb 授权（P1）走 Handshake 网页，见下�
 
 **状态（2026-10-09）：** S05/S06 开链已通过；S08/S09 人工验收已通过（S08 暂无真实渠道账号；S09 含真实写入与脏净房）。AI 唤起的浏览器页须支持手机（交接第 0.12 节）。S07 暂停；S10 Airbnb 真连暂缓。本地开发请指向 `dist/run.cjs`，Cursor 推荐服务名 **`Locals Overseas`**。详见[交接文档](./ai-onboarding-xcode-handoff.zh-CN.md)。
 
-**后续：** 提交 MCP 工作区；发布海外 PC 移动端改动到 overseas-dev；有渠道/Airbnb 测试账号后补真连。
+**当前收尾：** PC 41 项测试及构建、MCP 138 项离线测试及类型检查通过；线上 Cookie、绑定门店与环境隔离通过（交接 0.13）。有渠道/Airbnb 测试账号后补真连；真机待测，M 系列未启动。
 
 Cookie 不能跨域：Handshake 页和 Airbnb `redirect_uri` **必须同一主机**。Airbnb 已登记回调为 `https://overseas-dev.localhome.cn/channel/airbnb/callback`，**完整授权不要用 localhost**。
 

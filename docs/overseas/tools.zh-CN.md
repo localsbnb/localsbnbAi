@@ -36,17 +36,19 @@
 
 仅海外店。完整 OAuth 使用已发布的 `https://overseas-dev.localhome.cn`。
 
-2026-10-08 S05、S06 开链验证通过，API 环境隔离修复已在线生效；但浏览器初始化 `/camps/get` 仍返回 `COMMON_PERMISSION_DENIED`。真实 OAuth、poll 成功及导入仍待验收（S10），参见[交接清单](./ai-onboarding-xcode-handoff.zh-CN.md)。
+2026-10-09 收尾通过：登录 Cookie 与绑定门店保留；AI 初始化使用 `/camp/get` 与 `/systemConfigs/get`，两接口线上业务成功；历史 prod 配置不影响 dev 环境隔离。真实 OAuth、poll 成功及导入仍待验收（S10），参见[交接清单](./ai-onboarding-xcode-handoff.zh-CN.md)。
 
 HTTPS 修复已提交并通过发布后复测；S07 暂停；S08/S09 人工验收已通过。开链页须在手机浏览器可用；文案提示「浏览器页面（手机或桌面均可）」。
 
 | 工具 | 可以这样问 |
 |------|------------|
 | `start_handshake` | 连接 Airbnb |
-| `poll_handshake` | 我已完成 Airbnb 授权 / 已完成 |
+| `poll_handshake` | 网页完成授权与导入/关联后回复“已完成”（无参数核对） |
 | `list_channel_accounts` | 已绑的 Airbnb 账号 |
 | `import_airbnb_listings` | 导入这些 Airbnb 房源（先预览） |
 
+
+默认 Airbnb 流程：`start_handshake` 记录房源基线并开浏览器 → 用户完成授权及导入/关联 → 回复“已完成” → 无参数 `poll_handshake`。账号或同步时间变化不会单独判成功；未变化/未完成返回 pending，异常返回 needs_action。`import_airbnb_listings` 仅用于明确要求纯对话导入的高级场景，网页已导入后不可重复调用。
 
 ## S08 · Booking / Trip / Agoda（人工验收通过；暂无真实渠道账号真连）
 
