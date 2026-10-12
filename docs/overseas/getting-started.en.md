@@ -15,9 +15,7 @@
 
 Google sign-in is not in P0. Airbnb OAuth (P1) uses Handshake; full OAuth requires `LOCALSBNB_SITE_URL=https://overseas-dev.localhome.cn` (PC Handshake is published there).
 
-**Status (2026-10-09):** S05/S06 handshake open-link passed; S08/S09 human acceptance passed (S08 without real channel accounts; S09 includes real writes and clean-state). AI-opened pages must work on phone browsers (handoff §0.12). S07 paused; S10 Airbnb real-account E2E deferred. Prefer Cursor MCP name **`Locals Overseas`** pointing at local `dist/run.cjs`. See the [handoff notes (Chinese)](./ai-onboarding-xcode-handoff.zh-CN.md).
 
-**Closeout (2026-10-09):** MCP `8ca70e3` and PC `821ef05` are committed. PC 41 tests + dev build and MCP 138 offline tests + type-check passed. Live dev Cookie persistence, bound-camp initialization and environment isolation passed (handoff §0.13). Real channel accounts and mobile-device tests remain pending; M implementation has not started. npm publication was not rechecked.
 
 ## Cursor / Claude Desktop
 

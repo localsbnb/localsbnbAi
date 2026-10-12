@@ -13,6 +13,8 @@ build/
 .env
 .env.local
 .env.*.local
+.env.*
+!.env.example
 
 # Logs
 logs/
@@ -48,6 +50,8 @@ config/production.json
 # Local / IDE (personal environment — do not commit)
 .claude/
 .apifox/
+.agents/
+.codex/
 
 # Build artifact archives (do not commit)
 /*.zip
@@ -77,3 +81,16 @@ docs/overseas-apifox/
 
 # Internal overseas QA checklist (not user-facing docs)
 docs/overseas/test-checklist.md
+
+# Private deployment and development material must stay out of this repository.
+/Jenkinsfile
+/scripts/release/
+/scripts/dev/
+/skills-lock.json
+/.agents/
+/deployment/remote/README.md
+/docs/overseas/ai-*.md
+/docs/overseas/remote-mcp-*.md
+/docs/overseas/*acceptance*.md
+.env.*
+!.env.example

@@ -36,7 +36,6 @@
 
 仅海外店。完整 OAuth 使用已发布的 `https://overseas-dev.localhome.cn`。
 
-2026-10-09 收尾通过：登录 Cookie 与绑定门店保留；AI 初始化使用 `/camp/get` 与 `/systemConfigs/get`，两接口线上业务成功；历史 prod 配置不影响 dev 环境隔离。真实 OAuth、poll 成功及导入仍待验收（S10），参见[交接清单](./ai-onboarding-xcode-handoff.zh-CN.md)。
 
 HTTPS 修复已提交并通过发布后复测；S07 暂停；S08/S09 人工验收已通过。开链页须在手机浏览器可用；文案提示「浏览器页面（手机或桌面均可）」。
 
