@@ -1,0 +1,96 @@
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+.env.*
+!.env.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Config files with secrets
+config/local.json
+config/production.json
+
+# Local / IDE (personal environment — do not commit)
+.claude/
+.apifox/
+.agents/
+.codex/
+
+# Build artifact archives (do not commit)
+/*.zip
+
+# Root: only README.md is tracked; other docs live in docs/internal (also ignored)
+/*.md
+!/README.md
+
+# Local git backup folder
+.git_backup_*
+
+# Non-runtime assets (do not upload)
+.cursor/
+skills/
+docker/
+docs/*
+!docs/overseas/
+!docs/overseas/**
+!docs/readme/
+!docs/readme/**
+
+# Internal design docs — never publish
+docs/internal/
+
+# Apifox API dumps (Chinese source material — do not publish)
+docs/overseas-apifox/
+
+# Internal overseas QA checklist (not user-facing docs)
+docs/overseas/test-checklist.md
+
+# Private deployment and development material must stay out of this repository.
+/Jenkinsfile
+/scripts/release/
+/scripts/dev/
+/skills-lock.json
+/.agents/
+/deployment/remote/README.md
+/docs/overseas/ai-*.md
+/docs/overseas/remote-mcp-*.md
+/docs/overseas/*acceptance*.md
+.env.*
+!.env.example

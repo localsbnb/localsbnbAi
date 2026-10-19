@@ -1,0 +1,10 @@
+{
+  "LocalsBnb MCP": {
+    "command": "npx",
+    "args": ["--yes", "localsbnb-mcp-server"],
+    "env": {
+      "APP_SECRET": "<your APP_SECRET, do not commit>",
+      "APP_ID": "<your APP_ID>"
+    }
+  }
+}

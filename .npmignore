@@ -1,0 +1,8 @@
+# Keep local run artifacts, logs, and env files out of the npm package (package.json "files" still honors these exclusions)
+dist/logs/
+logs/
+**/*.log
+.env
+.env.*
+.env.local
+*.tgz
