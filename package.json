@@ -6,8 +6,8 @@
   "type": "module",
   "scripts": {
     "clean": "node scripts/clean-dist.cjs",
-    "build": "tsc && cp dist/index.js dist/start.mjs && cp scripts/run-mcp.cjs dist/run.cjs && cp scripts/run-mcp.sh dist/run.sh && cp package.json dist/package.json && chmod +x dist/run.cjs dist/run.sh dist/start.sh 2>/dev/null || true",
-    "build:prod": "tsc -p tsconfig.prod.json && cp dist/index.js dist/start.mjs && cp scripts/run-mcp.cjs dist/run.cjs && cp scripts/run-mcp.sh dist/run.sh && cp package.json dist/package.json && node scripts/obfuscate-dist.cjs && chmod +x dist/run.cjs dist/run.sh 2>/dev/null || true",
+    "build": "tsc && cp dist/index.js dist/start.mjs && cp scripts/run-mcp.cjs dist/run.cjs && cp scripts/run-mcp.sh dist/run.sh && cp package.json dist/package.json && chmod +x dist/run.cjs dist/run.sh dist/start.mjs",
+    "build:prod": "tsc -p tsconfig.prod.json && cp dist/index.js dist/start.mjs && cp scripts/run-mcp.cjs dist/run.cjs && cp scripts/run-mcp.sh dist/run.sh && cp package.json dist/package.json && node scripts/obfuscate-dist.cjs && chmod +x dist/run.cjs dist/run.sh dist/start.mjs",
     "prebuild": "npm run clean",
     "prepublishOnly": "npm run clean && npm run build:prod",
     "dev": "tsx watch src/index.ts",
@@ -54,9 +54,7 @@
     "@typescript-eslint/parser": "^6.13.0",
     "eslint": "^8.54.0",
     "javascript-obfuscator": "^4.1.1",
-    "jest": "^29.7.0",
     "prettier": "^3.1.0",
-    "ts-jest": "^29.1.1",
     "tsx": "^4.6.0",
     "typescript": "^5.3.2"
   },

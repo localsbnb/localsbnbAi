@@ -1,194 +1,86 @@
-# LocalsBnb
+# LocalsBnb / 路客云 MCP
 
-**Say it. Your property answers.**  
-No LocalsBnb app. No extra computer. The AI you already use **is** the front desk.
+Connect an AI assistant to an authorized property to query rooms, rates, reservations and operating data. Property changes use a preview, explicit confirmation and a result check.
 
-**Language:** [English](README.md) · [简体中文](docs/readme/README.zh-CN.md) · [繁體中文](docs/readme/README.zh-TW.md) · [日本語](docs/readme/README.ja.md) · [ภาษาไทย](docs/readme/README.th.md) · [Bahasa Melayu](docs/readme/README.ms.md)
+[简体中文](docs/readme/README.zh-CN.md)
 
-![Say it. Your property answers.](docs/readme/assets/localsbnb-hero.png)
+## Connection modes
 
----
+| Mode | Runs on | Connection |
+| --- | --- | --- |
+| Local | Your computer | Node.js MCP process over stdio |
+| Remote | Hosted service | HTTPS Streamable HTTP with OAuth |
 
-## What is this?
+The code supports China domestic properties (路客云) and overseas properties (LocalsBnb) through separate API adapters. Available operations depend on the property, granted scopes and backend permissions.
 
-Your listings already live on **LocalsBnb**, connected to **Airbnb, Booking.com, Agoda, and Trip.com** — built for hosts who will not live inside another dashboard.
+## Remote connection
 
-The old way: unlock the phone, open four apps, wait for calendars, copy a name into a notebook, forget who is in 302.
+For WorkBuddy, add a remote MCP connection with this URL:
 
-The new way: open the chat you already have, and talk like you talk to a duty manager.
+```text
+https://agent-prod.localhome.cn/workbuddy/mcp
+```
 
-> “Who’s arriving today?”  
-> “Is the sea-view room free Saturday?”  
-> “Check Anna in — wait, show me the booking first.”
+For a ChatGPT custom app that supports remote MCP, use:
 
-**Just say.** LocalsBnb sits behind your favorite AI and pulls the live store: real guests, real rooms, real money. You stay human. The clicking goes away.
+```text
+https://agent-prod.localhome.cn/mcp
+```
 
-![You speak. Your AI asks LocalsBnb. LocalsBnb answers with your real bookings and rooms.](docs/readme/assets/localsbnb-flow.png)
+Sign in on the authorization page, choose your property and review the permissions. Do not enter passwords, verification codes, access tokens or App Secrets into chat. A property without an existing App Secret requires administrator setup. Remote connection availability depends on the host application's MCP and OAuth support; these URLs do not imply a public marketplace listing.
 
----
+The [WorkBuddy configuration](workbuddy/mcp.json) contains no account credentials. A browser GET to the MCP URL returns 405; a client must use POST. An unauthenticated WorkBuddy POST returns 401 with OAuth discovery information.
 
-## Where can I use it?
+## Local installation from source
 
-If the software can add a “tool” or “MCP”, LocalsBnb can live there. You install **once**. After that, any chat in that app can run your property.
+Use Node.js 22 and npm.
 
-**Use it on the computer**
+```sh
+npm install
+npm run type-check
+npm run build
+```
 
-| App | Who usually likes it |
-|-----|----------------------|
-| **Claude** (Claude Desktop) | The easiest start. Talk in plain language. |
-| **ChatGPT** | If you already live in ChatGPT every day. |
-| **Cursor** | If you already write or work in Cursor. |
-| **Windsurf** | Same idea: an AI editor that accepts tools. |
-| **VS Code + GitHub Copilot** | If your laptop is already VS Code. |
-
-**Use it where you already chat**
-
-Most overseas hosts stay in Claude / ChatGPT / Cursor. OpenClaw and Hermes are not the usual overseas install — they matter when you already use an assistant that lives inside a chat app.
-
-| Where you talk | How LocalsBnb gets there |
-|----------------|--------------------------|
-| **WeChat / WeCom / Feishu / DingTalk** | China: add the same two codes to OpenClaw or Hermes, then ask while you walk. |
-| **WhatsApp / LINE / Telegram / iMessage** | Overseas: only if you already run OpenClaw or Hermes as that chat’s assistant. Same two codes. If you do not have that setup, start in Claude / ChatGPT / Cursor. |
-
-![Most hosts stay in Claude, ChatGPT, or Cursor. OpenClaw or Hermes only if that assistant already lives in WeChat or WhatsApp.](docs/readme/assets/localsbnb-doors.png)
-
-Pick the app you already open in the morning. Do not download a fifth “hotel app”.
-
----
-
-## What can it actually do?
-
-### A day in the life — just ask
-
-**7:10, still in bed, another city**  
-“What’s the board for today — arrivals, staying, leaving?”  
-One answer. Names, rooms, dates. You text the cleaner before coffee.
-
-**8:00, front desk handover**  
-“Who is checking out before 11? Any dirty rooms left?”  
-The new hire does not need a two-hour system class. They already know how to ask a question.
-
-**10:30, guest on the phone**  
-“Can the Lin family check in early? What time does the last person leave that room?”  
-You answer in thirty seconds, not after ‘let me open the computer’.
-
-**12:00, thinking about the weekend**  
-“What’s our Airbnb price Friday to Sunday? What about Agoda?”  
-Compare channels in one breath. No four logins.
-
-**15:00, housekeeper in the corridor**  
-“Which rooms are empty and clean right now?”  
-“Mark 302 dirty.” / “Mark the sea-view room clean.” *(overseas store)*  
-She does not need your password. You look, you tell her — or you change the clean status in the same chat.
-
-**16:20, a walk-in guest**  
-“Create a manual booking for Zhang, check in tonight, check out Sunday, one adult.” *(overseas store)*  
-You see the quote first. You confirm. Then the order exists.
-
-**17:05, weekend pricing**  
-“Set this Airbnb rate to 100 for Friday and Saturday — show me first.” *(overseas store)*  
-Preview the dates and amount. You say yes. Then the calendar updates.
-
-**18:00, owner group chat**  
-“How did we do this week? Occupancy, average price, revenue.”  
-The number comes back in **your store’s language and currency** — the ones you already set in LocalsBnb.
-
-**21:40, last-minute request**  
-“They want one more night. Can we extend?” *(overseas store)*  
-The AI shows **who, which room, which dates**. You say yes. Then it happens. Not before.
-
-**22:15, wrong room**  
-“Move tonight’s guest from 201 to 305.” *(overseas store)*  
-Same rule: it names the booking. You confirm. Then the room changes.
-
-**Holiday / rain / a concert next door**  
-“How full are we this week versus last week?”  
-You decide whether to raise the weekend or leave it — with the week in front of you, not a gut feel.
-
-**First day of a new staff member**  
-They do not learn menus. They learn three sentences: *today’s arrivals, today’s rooms, this week’s numbers.*
-
-### Open the store & connect channels — overseas LocalsBnb stores only
-
-New host? You can **register or sign in in the chat** — email, code, password — without hunting through another install wizard.
-
-Already live? Say **“Connect Airbnb”** or **“Connect Booking / Trip / Agoda.”** LocalsBnb opens the browser page (phone or desktop). You finish the channel steps there. Come back and say **“Done.”** The AI checks the link — it does not ask you to paste property IDs.
-
-![Say connect. Finish in the browser. Say Done — AI verifies the channel.](docs/readme/assets/localsbnb-channels.png)
-
-### Handle the stay & run the calendar — overseas LocalsBnb stores only
-
-You can ask the AI to **check in, check out, extend, change a room, create a manual order, update channel rates, close or open rooms, and set dirty / clean**.
-
-It will never do writes quietly. You always see the guest, dates, amounts, or clean status first. You say “that’s the one.” Only then it goes through.
-
-![Account, order, rates, clean status — always preview, then you confirm.](docs/readme/assets/localsbnb-ops.png)
-
-![The AI shows the booking first. You confirm. Then it happens.](docs/readme/assets/localsbnb-confirm.png)
-
-**If your store is in China:** you can ask all the “what’s going on” questions. **Check-in, check-out, extend, room change, channel connect, manual order, rate edits, and clean-status writes are not available in China yet.** Cancel or sync a calendar — still do that in LocalsBnb.
-
----
-
-## How do I start? (three steps)
-
-### 1. Take two codes from LocalsBnb
-
-Log in to LocalsBnb and copy:
-
-- **APP_SECRET** — your key  
-- **APP_ID** — your property  
-
-Yours only. Not for the class WeChat group.
-
-### 2. Drop them into the AI you picked
-
-Open **Claude, ChatGPT, or Cursor**. Add a tool / MCP, paste this, replace the two lines:
+Configure a client that supports local stdio MCP. Replace the example absolute path with your checkout path:
 
 ```json
 {
   "mcpServers": {
-    "LocalsBnb MCP": {
-      "command": "npx",
-      "args": ["--yes", "localsbnb-mcp-server"],
+    "localsbnb": {
+      "command": "node",
+      "args": ["/absolute/path/localsbnbAi/dist/index.js"],
       "env": {
-        "APP_SECRET": "<your APP_SECRET>",
-        "APP_ID": "<your APP_ID>"
+        "LUKEYUN_API_BASE_URL": "https://hudson-prod.localhome.cn",
+        "LOCALSBNB_SITE_URL": "https://localsbnb.com"
       }
     }
   }
 }
 ```
 
-| You use… | Where it usually goes |
-|----------|------------------------|
-| Cursor | Settings → MCP, or the `mcp.json` file |
-| Claude Desktop | Settings → custom tools / MCP |
-| ChatGPT | Settings → apps / developer tools (when your plan allows it) |
-| WeChat / Feishu (China) | Ask the person who set up OpenClaw or Hermes to add the same two codes |
-| WhatsApp / LINE / iMessage | Only if OpenClaw or Hermes already talks in that chat — same two codes. Otherwise use Claude / ChatGPT / Cursor |
+Local clients can use the local sign-in flow or provide their existing `APP_SECRET` and `APP_ID` through protected client environment settings. Never commit these values or share them in chat. The published npm package may differ from this GitHub snapshot; building this checkout uses the source shown here.
 
-Hate config? Tell the AI itself:
+## Capabilities
 
-> Help me install localsbnb-mcp-server. Here is my APP_SECRET and APP_ID.
+- Read room status, prices, arrivals, in-house guests, departures, order details and operating reports.
+- Preview and confirm check-in, normal checkout, stay extensions, room assignment, manual reservations, room blocking and clean/dirty flags where supported.
+- Domestic adapters also support eligible unpaid manual-order cancellation, batch channel prices and central calendar prices.
+- Open channel authorization pages and check the resulting account, property and listing associations. Channel credentials are entered on the channel's own pages.
 
-### 3. Talk like a host, not like a programmer
+Domestic cancellation is limited to unpaid, unoccupied manual short-stay orders without deposits or refund records. Early check-in, early checkout that requires repricing, and unsupported payment/refund workflows use the PC application. Domestic price changes cover at most 30 selected dates and batch changes accept at most 20 targets.
 
-- “Who arrives today?”  
-- “Show today’s rooms.”  
-- “Airbnb prices this week.”  
-- “How is this week going?”  
-- “Help me sign up for LocalsBnb.” / “Sign me in.” *(overseas)*  
-- “Connect Airbnb.” / “Connect Booking.” — then “Done.” *(overseas)*  
-- “Check Maria in — show me the booking first.” *(overseas)*  
-- “Create a booking for Zhang, tonight to Sunday.” *(overseas)*  
-- “Change this rate for Friday–Saturday — preview first.” *(overseas)*  
-- “Mark room 302 dirty.” / “Mark it clean.” *(overseas)*
+All mutations require a current preview and confirmation. If a result is `unknown`, query the operation and affected resources before further action; do not automatically retry the write.
 
-Answers follow the **language of the property** in LocalsBnb. You do not pick English or Japanese again here. Channel pages work on **phone or desktop** browsers.
+## Self-hosting the remote service
 
----
+The remote entry is `dist/remote/runtimeIndex.js`. A generic Dockerfile, storage Compose examples, placeholder environment file and SQL migrations are under [`deployment/remote`](deployment/remote). They contain no company deployment settings.
 
-## Need a hand?
+Configure an explicit environment, public HTTPS origin, PostgreSQL, Redis, independent encryption keys and OAuth clients. Enable WorkBuddy with `LOCALSBNB_WORKBUDDY_SOURCE=localsbnb`. Enable business tools only after storage and service credentials are configured. Local stdio credentials must not be injected into the shared remote service.
+
+Review migrations before applying them. New databases use migrations 001 and 002; migration 003 upgrades older column conventions and must not be blindly applied to an already-current schema. Existing encrypted records require the old decryption keys to remain available across upgrades and rotations. Configure the PC-side channel handshake service separately if using overseas channel onboarding.
+
+`/healthz` checks liveness; `/readyz` checks enabled runtime dependencies. A ready response does not prove a user's authorization, backend permissions or business results.
+
+## Support
 
 [localsbnb.com](https://localsbnb.com/)

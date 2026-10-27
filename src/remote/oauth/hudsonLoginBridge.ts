@@ -2,6 +2,7 @@ export interface BrowserLoginSession {
   subjectId: string;
   loginToken: string;
   camps: Array<{ campId: string; name: string }>;
+  edition?: 'cn' | 'overseas';
 }
 export class BrowserAuthError extends Error {
   constructor(
@@ -29,10 +30,11 @@ export interface SignupProfile {
 export interface BrowserLoginBridge {
   sendSignupCode?(profile: SignupProfile): Promise<void>;
   signup?(email: string, password: string, authCode: string): Promise<BrowserLoginSession>;
-  login(email: string, password: string, authCode?: string): Promise<BrowserLoginSession>;
+  login(email: string, password: string, authCode?: string, edition?: 'cn' | 'overseas'): Promise<BrowserLoginSession>;
   authorize(
     session: BrowserLoginSession,
-    campId: string
+    campId: string,
+    edition?: 'cn' | 'overseas'
   ): Promise<{ subjectId: string; credential: string }>;
 }
 interface Envelope {

@@ -1,3 +1,4 @@
+import { DOMESTIC_PROTOCOL_HEADERS } from './region/domesticProtocol.js';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { ListToolsRequestSchema, CallToolRequestSchema } from '@modelcontextprotocol/sdk/types.js';
@@ -226,7 +227,7 @@ export class LukeyunMCPServer {
         campId: String(next.campId || this.campId || ''),
       });
     } else {
-      this.apiClient.setExtraHeaders({});
+      this.apiClient.setExtraHeaders({ ...DOMESTIC_PROTOCOL_HEADERS });
     }
 
     const nextTools = getActiveToolDefinitions(next);

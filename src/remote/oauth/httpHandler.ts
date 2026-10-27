@@ -13,6 +13,13 @@ export interface OAuthHttpOptions {
   issuer: string;
   resource: string;
   clients: readonly HttpOAuthClient[];
+  basePath?: '' | '/oauth';
+  metadataPath?: string;
+  resolveClient?: (id: string) => Promise<HttpOAuthClient | undefined>;
+  scopesSupported?: readonly string[];
+  workbuddyResource?: string;
+  workbuddyCodes?: Pick<AuthorizationCodeService, 'redeem'>;
+  workbuddyTokens?: Pick<OAuthTokenService, 'issue' | 'refresh' | 'revoke'>;
   codes: Pick<AuthorizationCodeService, 'redeem'>;
   tokens: Pick<OAuthTokenService, 'issue' | 'refresh' | 'revoke'>;
   /** 必须由部署注入可信来源限流；不得盲目信任客户端 X-Forwarded-For。 */
@@ -77,11 +84,12 @@ export async function readOAuthForm(req: IncomingMessage): Promise<URLSearchPara
     if (form.getAll(key).length !== 1) throw new HttpError(400, 'invalid_request');
   return form;
 }
-function authenticate(
+async function authenticate(
   req: IncomingMessage,
   form: URLSearchParams,
-  clients: ReadonlyMap<string, HttpOAuthClient>
-): HttpOAuthClient {
+  clients: ReadonlyMap<string, HttpOAuthClient>,
+  resolveClient?: (id: string) => Promise<HttpOAuthClient | undefined>
+): Promise<HttpOAuthClient> {
   if (form.has('client_secret')) throw new HttpError(400, 'invalid_request');
   const header = req.headers.authorization;
   let id: string;
@@ -105,7 +113,7 @@ function authenticate(
   } else {
     id = required(form, 'client_id');
   }
-  const client = clients.get(id);
+  const client = clients.get(id) ?? await resolveClient?.(id);
   if (!client) throw new HttpError(401, 'invalid_client');
   if (client.authMethod === 'none') {
     if (header) throw new HttpError(401, 'invalid_client');
@@ -127,11 +135,16 @@ export function createOAuthHttpHandler(
   if (
     issuer.protocol !== 'https:' ||
     options.issuer !== issuer.origin ||
-    options.resource !== `${issuer.origin}/mcp`
+    options.resource !== `${issuer.origin}${options.basePath ? '/workbuddy/mcp' : '/mcp'}`
   ) {
     throw new Error('OAuth HTTP requires an HTTPS root issuer and its /mcp resource');
   }
   const clients = new Map<string, HttpOAuthClient>();
+  const basePath = options.basePath ?? '';
+  const authorizationPath = `${basePath}/authorize`;
+  const tokenPath = `${basePath}/token`;
+  const revokePath = `${basePath}/revoke`;
+  const metadataPath = options.metadataPath ?? '/.well-known/oauth-protected-resource/mcp';
   for (const client of options.clients) {
     if (
       !client.clientId ||
@@ -147,7 +160,7 @@ export function createOAuthHttpHandler(
     });
   }
   return async (req, res) => {
-    const tokenRequest = req.method === 'POST' && req.url?.split('?')[0] === '/token';
+    const tokenRequest = req.method === 'POST' && req.url?.split('?')[0] === tokenPath;
     if (tokenRequest) options.onTokenDiagnostic?.({ phase: 'received' });
     try {
       // 固定 issuer，忽略代理头生成 URL；部署代理必须保留已批准 Host。
@@ -156,7 +169,7 @@ export function createOAuthHttpHandler(
       if (url.origin !== issuer.origin) throw new HttpError(400, 'invalid_request');
       const path = url.pathname;
       if (
-        ['/authorize', '/authorize/login', '/authorize/signup', '/authorize/consent'].includes(path)
+        [authorizationPath, `${authorizationPath}/login`, `${authorizationPath}/signup`, `${authorizationPath}/consent`].includes(path)
       ) {
         if (!options.authorization) throw new HttpError(503, 'temporarily_unavailable');
         if (!(await options.allowRequest(req))) throw new HttpError(429, 'temporarily_unavailable');
@@ -168,21 +181,22 @@ export function createOAuthHttpHandler(
       if (req.method === 'GET' && path === '/.well-known/oauth-authorization-server') {
         send(res, 200, {
           issuer: issuer.origin,
-          authorization_endpoint: `${issuer.origin}/authorize`,
-          token_endpoint: `${issuer.origin}/token`,
-          revocation_endpoint: `${issuer.origin}/revoke`,
+          authorization_endpoint: `${issuer.origin}${authorizationPath}`,
+          token_endpoint: `${issuer.origin}${tokenPath}`,
+          revocation_endpoint: `${issuer.origin}${revokePath}`,
+          ...(options.resolveClient ? { registration_endpoint: `${issuer.origin}/oauth/register` } : {}),
           response_types_supported: ['code'],
           grant_types_supported: ['authorization_code', 'refresh_token'],
           code_challenge_methods_supported: ['S256'],
           token_endpoint_auth_methods_supported: ['none', 'client_secret_basic'],
           revocation_endpoint_auth_methods_supported: ['none', 'client_secret_basic'],
           scopes_supported: [
-            ...new Set([...clients.values()].flatMap((c) => [...c.allowedScopes])),
+            ...new Set(options.scopesSupported ?? [...clients.values()].flatMap((c) => [...c.allowedScopes])),
           ],
         });
         return;
       }
-      if (req.method === 'GET' && path === '/.well-known/oauth-protected-resource/mcp') {
+      if (req.method === 'GET' && path === metadataPath) {
         send(res, 200, {
           resource: options.resource,
           authorization_servers: [issuer.origin],
@@ -190,7 +204,11 @@ export function createOAuthHttpHandler(
         });
         return;
       }
-      if (!['/token', '/revoke'].includes(path)) throw new HttpError(404, 'not_found');
+      if (req.method === 'GET' && path === '/.well-known/oauth-protected-resource' && options.workbuddyResource) {
+        send(res, 200, { resource: options.workbuddyResource, authorization_servers: [issuer.origin], bearer_methods_supported: ['header'] });
+        return;
+      }
+      if (![tokenPath, revokePath].includes(path)) throw new HttpError(404, 'not_found');
       if (req.method !== 'POST') {
         res.setHeader('Allow', 'POST');
         throw new HttpError(405, 'invalid_request');
@@ -200,9 +218,15 @@ export function createOAuthHttpHandler(
         throw new HttpError(403, 'invalid_request');
       if (!(await options.allowRequest(req))) throw new HttpError(429, 'temporarily_unavailable');
       const form = await readOAuthForm(req);
-      const client = authenticate(req, form, clients);
-      if (path === '/revoke') {
-        await options.tokens.revoke(client.clientId, required(form, 'token'));
+      const client = await authenticate(req, form, clients, options.resolveClient);
+      const isWorkbuddy = !!options.workbuddyResource &&
+        (path === revokePath ? client.clientId.startsWith('wb_') : form.get('resource') === options.workbuddyResource);
+      if (isWorkbuddy !== client.clientId.startsWith('wb_')) throw new HttpError(400, 'invalid_target');
+      const tokenService = isWorkbuddy ? options.workbuddyTokens : options.tokens;
+      const codeService = isWorkbuddy ? options.workbuddyCodes : options.codes;
+      if (!tokenService || !codeService) throw new HttpError(400, 'invalid_target');
+      if (path === revokePath) {
+        await tokenService.revoke(client.clientId, required(form, 'token'));
         send(res, 200, {});
         return;
       }
@@ -210,12 +234,12 @@ export function createOAuthHttpHandler(
       if (!['authorization_code', 'refresh_token'].includes(grantType))
         throw new HttpError(400, 'unsupported_grant_type');
       const resource = required(form, 'resource');
-      if (resource !== options.resource) throw new HttpError(400, 'invalid_target');
+      if (resource !== (isWorkbuddy ? options.workbuddyResource : options.resource)) throw new HttpError(400, 'invalid_target');
       if (form.has('scope')) throw new HttpError(400, 'invalid_scope'); // 初期仅使用授权时的完整 scope。
       if (grantType === 'authorization_code') {
         const redirectUri = required(form, 'redirect_uri');
         if (!client.redirectUris.includes(redirectUri)) throw new HttpError(400, 'invalid_grant');
-        const approved = await options.codes.redeem(client.clientId, {
+        const approved = await codeService.redeem(client.clientId, {
           code: required(form, 'code'),
           verifier: required(form, 'code_verifier'),
           redirectUri,
@@ -223,12 +247,12 @@ export function createOAuthHttpHandler(
         });
         if (approved.scopes.some((s) => !client.allowedScopes.includes(s)))
           throw new HttpError(400, 'invalid_scope');
-        send(res, 200, await options.tokens.issue(approved));
+        send(res, 200, await tokenService.issue(approved));
       } else {
         send(
           res,
           200,
-          await options.tokens.refresh(client.clientId, required(form, 'refresh_token'), resource)
+          await tokenService.refresh(client.clientId, required(form, 'refresh_token'), resource)
         );
       }
       if (tokenRequest) options.onTokenDiagnostic?.({ phase: 'issued', status: 200 });

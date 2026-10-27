@@ -16,6 +16,8 @@ import { PostgresGrantStore } from './oauth/postgresGrantStore.js';
 import { RedisAuthorizationCodeStore, type RedisCommands } from './oauth/redisCodeStore.js';
 import { RedisTokenFamilyStore } from './oauth/redisTokenStore.js';
 import type { BrowserLoginBridge } from './oauth/hudsonLoginBridge.js';
+import { WorkbuddyLoginBridge } from './oauth/workbuddyLoginBridge.js';
+import { WorkbuddyClients, WORKBUDDY_SCOPES } from './oauth/workbuddyClients.js';
 import { createRateLimiter } from './rateLimit.js';
 import type { RuntimeConfig } from './runtimeConfig.js';
 import type { Client } from 'pg';
@@ -57,6 +59,18 @@ export function createRemoteRuntime(
     config.resourceUrl,
     namespace
   );
+  const workbuddyResource = `${config.publicOrigin}/workbuddy/mcp`;
+  const workbuddyNamespace = `${namespace}:workbuddy`;
+  const workbuddyStore = new RedisAuthorizationCodeStore(dependencies.redis);
+  const workbuddyClients = config.workbuddySource
+    ? new WorkbuddyClients(workbuddyStore, workbuddyNamespace, config.workbuddySource)
+    : undefined;
+  const workbuddyCodes = workbuddyClients
+    ? new AuthorizationCodeService(workbuddyStore, workbuddyResource, workbuddyNamespace, Date.now, true)
+    : undefined;
+  const workbuddyTokens = workbuddyClients
+    ? new OAuthTokenService(new RedisTokenFamilyStore(dependencies.redis), grants, workbuddyResource, workbuddyNamespace, Date.now, true)
+    : undefined;
   const workStore = new WorkStore(dependencies.db, cipher);
   const handshake = new RemoteHandshake(
     workStore,
@@ -78,6 +92,12 @@ export function createRemoteRuntime(
     issuer: config.publicOrigin,
     namespace,
     clients: config.clients,
+    ...(workbuddyClients ? {
+      workbuddyResource,
+      workbuddyBridge: new WorkbuddyLoginBridge(config.environment, dependencies.businessFetch),
+      workbuddyCodes,
+      resolveClient: (id: string) => workbuddyClients.get(id),
+    } : {}),
     store: new RedisAuthorizationCodeStore(dependencies.redis),
     cipher,
     grants,
@@ -89,6 +109,13 @@ export function createRemoteRuntime(
     issuer: config.publicOrigin,
     resource: config.resourceUrl,
     clients: config.clients,
+    ...(workbuddyClients ? {
+      workbuddyResource,
+      workbuddyCodes,
+      workbuddyTokens,
+      resolveClient: (id: string) => workbuddyClients.get(id),
+      scopesSupported: [...new Set([...config.clients.flatMap((c) => c.allowedScopes), ...WORKBUDDY_SCOPES])],
+    } : {}),
     codes,
     tokens,
     authorization,
@@ -143,10 +170,18 @@ export function createRemoteRuntime(
         }
         return;
       }
-      if (req.url !== '/mcp') {
+      if (req.url === '/oauth/register' && workbuddyClients) {
+        if (!(await allowRequest(req))) { json(res, 429, { error: 'rate_limited' }); return; }
+        await workbuddyClients.register(req, res);
+        return;
+      }
+      if (req.url !== '/mcp' && !(workbuddyClients && req.url === '/workbuddy/mcp')) {
         await oauth(req, res);
         return;
       }
+      const workbuddyRequest = req.url === '/workbuddy/mcp';
+      const requestedResource = workbuddyRequest ? workbuddyResource : config.resourceUrl;
+      const metadataUrl = `${config.publicOrigin}/.well-known/oauth-protected-resource${workbuddyRequest ? '' : '/mcp'}`;
       if (req.headers.origin && req.headers.origin !== config.publicOrigin) {
         json(res, 403, { error: 'invalid_origin' });
         return;
@@ -168,24 +203,43 @@ export function createRemoteRuntime(
       ) {
         res.setHeader(
           'WWW-Authenticate',
-          `Bearer resource_metadata="${config.publicOrigin}/.well-known/oauth-protected-resource/mcp"`
+          `Bearer resource_metadata="${metadataUrl}"`
         );
         json(res, 401, { error: 'invalid_token' });
         return;
       }
+      // WorkBuddy discovers OAuth only after a protected resource challenges it.
+      // Keep ChatGPT's existing anonymous onboarding on /mcp unchanged.
+      if (workbuddyRequest && !match) {
+        res.setHeader('WWW-Authenticate', `Bearer resource_metadata="${metadataUrl}"`);
+        json(res, 401, { error: 'unauthorized' });
+        return;
+      }
       // No token permits only public onboarding; invalid tokens never fall back to anonymous.
-      const identity = match ? await tokens.verify(match[1], config.resourceUrl) : undefined;
+      const identity = match ? await (workbuddyRequest ? workbuddyTokens! : tokens).verify(match[1], requestedResource) : undefined;
       const oauthScheme = [{ type: 'oauth2', scopes: ['rooms:read'] }];
-      const clientScopes = identity
-        ? [...(config.clients.find((client) => client.clientId === identity.clientId)?.allowedScopes ?? [])]
-        : discoverableScopes;
+      const clientScopes = workbuddyRequest
+        ? [...((identity && await workbuddyClients!.get(identity.clientId))?.allowedScopes ?? [])]
+        : identity
+          ? [...(config.clients.find((client) => client.clientId === identity.clientId)?.allowedScopes ?? [])]
+          : discoverableScopes;
       const devAcceptanceAvailable =
-        config.environment === 'dev' &&
+        !workbuddyRequest && config.environment === 'dev' &&
         config.businessEnabled &&
         !!identity &&
         DEV_ACCEPTANCE_SCOPES.every((scope) => clientScopes.includes(scope));
       const availableBusinessTools = config.businessEnabled
-        ? business.list({ scopes: clientScopes })
+        ? business.list({ scopes: clientScopes, clientId: identity?.clientId }).filter((tool) =>
+            !workbuddyRequest || ['open_property_session', 'list_authorized_properties', 'switch_property', 'get_operation_status',
+              'query_room_status_new', 'query_today_room_status', 'query_room_prices', 'query_today_orders',
+              'query_pre_arrival_orders', 'query_in_house_orders', 'query_pre_departure_orders',
+              'query_orders_by_date_range', 'get_order_details_v2', 'query_operational_data_v2',
+              'cn_check_in_order', 'cn_check_out_order', 'cn_cancel_order', 'cn_extend_order', 'cn_arrange_room',
+              'cn_close_rooms', 'cn_open_rooms', 'cn_update_room_clean_state',
+              'cn_query_channel_connection', 'cn_update_channel_prices', 'cn_batch_update_channel_prices',
+              'cn_update_central_prices', 'cn_create_manual_order',
+              'cn_map_channel_listing', 'cn_connect_channel_poi',
+              'cn_start_channel_connection', 'cn_complete_channel_connection'].includes(String(tool.name)))
         : [];
       const mcp = new Server(
         { name: 'localsbnb-remote', version: '0.1.0' },
@@ -268,7 +322,7 @@ export function createRemoteRuntime(
             isError: true,
             _meta: {
               'mcp/www_authenticate': [
-                `Bearer resource_metadata="${config.publicOrigin}/.well-known/oauth-protected-resource/mcp", scope="rooms:read"`,
+                `Bearer resource_metadata="${metadataUrl}", scope="rooms:read"`,
               ],
             },
             content: [
@@ -287,7 +341,7 @@ export function createRemoteRuntime(
               isError: true,
               _meta: {
                 'mcp/www_authenticate': [
-                  `Bearer resource_metadata="${config.publicOrigin}/.well-known/oauth-protected-resource/mcp", scope="${DEV_ACCEPTANCE_SCOPES.join(' ')}", error="insufficient_scope", error_description="Authorize all dev acceptance permissions to continue"`,
+                  `Bearer resource_metadata="${metadataUrl}", scope="${DEV_ACCEPTANCE_SCOPES.join(' ')}", error="insufficient_scope", error_description="Authorize all dev acceptance permissions to continue"`,
                 ],
               },
               content: [{ type: 'text', text: 'Additional dev test authorization is required.' }],
@@ -319,7 +373,7 @@ export function createRemoteRuntime(
               isError: true,
               _meta: {
                 'mcp/www_authenticate': [
-                  `Bearer resource_metadata="${config.publicOrigin}/.well-known/oauth-protected-resource/mcp", scope="${[...new Set([...identity.scopes, ...missingScopes])].join(' ')}", error="insufficient_scope", error_description="Authorize the additional tool permissions to continue"`,
+                  `Bearer resource_metadata="${metadataUrl}", scope="${[...new Set([...identity.scopes, ...missingScopes])].join(' ')}", error="insufficient_scope", error_description="Authorize the additional tool permissions to continue"`,
                 ],
               },
               content: [{ type: 'text', text: 'Additional authorization is required for this tool.' }],
@@ -382,7 +436,7 @@ export function createRemoteRuntime(
       if (error instanceof OAuthTokenError) {
         res.setHeader(
           'WWW-Authenticate',
-          `Bearer error="invalid_token", resource_metadata="${config.publicOrigin}/.well-known/oauth-protected-resource/mcp"`
+          `Bearer error="invalid_token", resource_metadata="${config.publicOrigin}/.well-known/oauth-protected-resource${req.url === '/workbuddy/mcp' ? '' : '/mcp'}"`
         );
         json(res, 401, { error: 'invalid_token' });
       } else json(res, 503, { error: 'temporarily_unavailable' });

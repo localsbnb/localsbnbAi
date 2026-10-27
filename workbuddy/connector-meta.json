@@ -1,0 +1,20 @@
+{
+  "name": "LocalsBnb",
+  "name_zh": "LocalsBnb 门店助手",
+  "name_en": "LocalsBnb Property Assistant",
+  "description": "安全连接 LocalsBnb 门店并查询房态、价格、订单和经营数据。",
+  "description_zh": "安全连接 LocalsBnb 门店并查询房态、价格、订单和经营数据。",
+  "description_en": "Securely connect a LocalsBnb property to check rooms, prices, orders and operations.",
+  "source": "localsbnb",
+  "type": "mcp",
+  "version": "0.1.0",
+  "minWorkbuddyVersion": "4.24.0",
+  "examples_zh": [
+    "查询我授权门店今天的房态",
+    "查看未来三天的到店订单"
+  ],
+  "examples_en": [
+    "Show today's room status for my connected property",
+    "List upcoming arrivals for the next three days"
+  ]
+}

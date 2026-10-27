@@ -6,6 +6,7 @@ const result = (data: unknown): ToolResult => ({
 interface Mutation {
   tool: string;
   endpoint: string;
+  method: 'POST' | 'PUT' | 'DELETE';
   digest: string;
   summary: unknown;
   payload: Record<string, unknown>;
@@ -19,20 +20,23 @@ export function persistentPreview(
 ): NonNullable<ToolContext['remote']>['preview'] {
   return async (input) => {
     const { args, tool, endpoint, payload, summary, snapshot, readBack } = input;
+    const method = input.method ?? 'POST';
     if (args.confirm !== undefined && typeof args.confirm !== 'boolean')
       throw new Error('confirm must be boolean');
-    const digest = hash(canonical({ tool, endpoint, payload, snapshot }));
+    const digest = hash(canonical({ tool, endpoint, method, payload, snapshot }));
     if (args.confirm !== true) {
       if (await store.hasUncertain(owner))
         return result({
-          status: 'unknown',
+          status: 'blocked',
+          reason: 'unresolved_prior_operation',
+          writeAttempted: false,
           next: 'An earlier write is unresolved. Query its operation status and affected resources; do not submit another mutation.',
         });
       const work = await store.create<Mutation>(
         owner,
         'mutation',
         digest,
-        { tool, endpoint, digest, summary, payload },
+        { tool, endpoint, method, digest, summary, payload },
         600
       );
       return result({
@@ -63,10 +67,10 @@ export function persistentPreview(
     if (!(await store.replace(work, work.data, 'running', 86400)))
       throw new Error('Preview already consumed');
     const claimed = { ...work, status: 'running', version: work.version + 1 };
-    let response: { success?: boolean; data?: unknown };
+    let response: { success?: boolean; data?: unknown; errorCode?: unknown };
     try {
       response = await writer.request({
-        method: 'POST',
+        method,
         url: endpoint,
         data: payload,
         retry: false,
@@ -85,15 +89,22 @@ export function persistentPreview(
       });
     }
     if (response.success !== true || response.data === false) {
+      // The Hudson client has already removed upstream messages and response bodies.
+      // Retain only its bounded diagnostic code so an unresolved write can be
+      // distinguished from a transport failure without exposing guest data.
+      const errorCode = typeof response.errorCode === 'string' &&
+        /^[A-Z][A-Z0-9_]{1,63}$/.test(response.errorCode)
+        ? response.errorCode : undefined;
       await store.replace(
         claimed,
-        { ...work.data, outcome: { reason: 'not_acknowledged' } },
+        { ...work.data, outcome: { reason: 'not_acknowledged', errorCode } },
         'unknown',
         86400
       );
       return result({
         status: 'unknown',
         operationId: work.id,
+        errorCode,
         next: 'Backend did not acknowledge success. Verify resources before another write.',
       });
     }

@@ -5,11 +5,12 @@ export { toolDefinitions } from './businessTools.js';
 import { getAuthToolDefinitions } from '../tools/auth/onboarding.js';
 import { getHandshakeToolDefinitions } from '../tools/auth/handshake.js';
 import { getOverseasOperationTools } from '../tools/overseas/operationTools.js';
+import { getDomesticOperationTools } from '../tools/domestic/operationTools.js';
 
 export function getActiveToolDefinitions(profile: RegionProfile): ToolDefinition[] {
   const authTools = getAuthToolDefinitions();
   if (profile.region !== 'overseas') {
-    return [...authTools, ...toolDefinitions];
+    return [...authTools, ...toolDefinitions, ...getDomesticOperationTools()];
   }
   const localized = toolDefinitions.map((tool) => {
     const description = getOverseasToolDescription(tool.name, profile.locale);

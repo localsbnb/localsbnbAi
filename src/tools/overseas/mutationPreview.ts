@@ -84,9 +84,10 @@ export async function previewOrExecute(
   payload: Record<string, unknown>,
   summary: unknown,
   snapshot: unknown = summary,
-  readBack?: (data: unknown) => Promise<unknown>
+  readBack?: (data: unknown) => Promise<unknown>,
+  method: 'POST' | 'PUT' | 'DELETE' = 'POST'
 ): Promise<ToolResult> {
-  if (context.remote) return context.remote.preview({args, tool, endpoint, payload, summary, snapshot, readBack});
+  if (context.remote) return context.remote.preview({args, tool, endpoint, method, payload, summary, snapshot, readBack});
   if (args.confirm !== undefined && typeof args.confirm !== 'boolean')
     invalid('confirm must be a boolean');
   const profile = profileOf(context);
@@ -95,6 +96,7 @@ export async function previewOrExecute(
       canonical({
         tool,
         endpoint,
+        method,
         payload,
         snapshot,
         campId: requireCampId(context),
@@ -140,7 +142,7 @@ export async function previewOrExecute(
     errorCode?: string;
     errorMsg?: string;
   }>({
-    method: 'POST',
+    method,
     url: endpoint,
     data: payload,
     headers: { 'Content-Type': 'application/json' },

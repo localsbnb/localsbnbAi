@@ -61,7 +61,7 @@ export class WorkStore {
   ): Promise<Work<T>> {
     // 按唯一键清理过期记录，不删除其他用户数据。running/unknown 写操作保留阻止自动重试。
     await this.db.query(
-      "DELETE FROM mcp_auth.work_items WHERE owner_hash=$1 AND kind=$2 AND dedup=$3 AND expires_at<=CURRENT_TIMESTAMP AND status NOT IN ('running','unknown')",
+      "DELETE FROM mcp_auth.work_items WHERE owner_hash=$1 AND kind=$2 AND dedup=$3 AND expires_at<=CURRENT_TIMESTAMP AND status NOT IN ('running','unknown','rejected_reviewed')",
       [owner, kind, dedup]
     );
     const id = randomUUID();
@@ -79,7 +79,7 @@ export class WorkStore {
   async get<T>(owner: string, id: string, kind: string): Promise<Work<T> | null> {
     if (!/^[a-f0-9-]{36}$/.test(id)) return null;
     const r = await this.db.query(
-      "SELECT * FROM mcp_auth.work_items WHERE id=$1 AND owner_hash=$2 AND kind=$3 AND (expires_at>CURRENT_TIMESTAMP OR (kind='mutation' AND status IN ('running','unknown')))",
+      "SELECT * FROM mcp_auth.work_items WHERE id=$1 AND owner_hash=$2 AND kind=$3 AND (expires_at>CURRENT_TIMESTAMP OR (kind='mutation' AND status IN ('running','unknown','rejected_reviewed')))",
       [id, owner, kind]
     );
     return r.rows[0] ? this.decode<T>(r.rows[0]) : null;
@@ -107,6 +107,38 @@ export class WorkStore {
     );
     return r.rows[0] ? this.decode<T>(r.rows[0]) : null;
   }
+  /** Operator-only lookup. Never exposed as an MCP tool. */
+  async forReview(id: string): Promise<Work | null> {
+    if (!/^[a-f0-9-]{36}$/.test(id)) throw new Error('Invalid operation ID');
+    const result = await this.db.query(
+      "SELECT * FROM mcp_auth.work_items WHERE id=$1 AND kind='mutation'", [id]);
+    return result.rows[0] ? this.decode(result.rows[0]) : null;
+  }
+
+  /** Keep the original encrypted outcome plus evidence; do not issue business requests. */
+  async rejectAfterReview(work: Work, review: {
+    expectedVersion: number; campId: string; endpoint: string; errorCode: string | null;
+    actor: string; evidenceSha256: string; reason: string;
+  }): Promise<boolean> {
+    const payload = work.data.payload as Record<string, unknown> | undefined;
+    const outcome = work.data.outcome as Record<string, unknown> | undefined;
+    if (work.kind !== 'mutation' || work.status !== 'unknown' || work.version !== review.expectedVersion ||
+      payload?.campId !== review.campId || work.data.endpoint !== review.endpoint ||
+      outcome?.reason !== 'not_acknowledged' || (outcome.errorCode ?? null) !== review.errorCode ||
+      !/^[a-f0-9]{64}$/.test(review.evidenceSha256) ||
+      !/^[A-Za-z0-9@._-]{1,100}$/.test(review.actor) ||
+      typeof review.reason !== 'string' || review.reason.length < 10 || review.reason.length > 1000)
+      throw new Error('Review evidence does not match an unresolved acknowledged rejection');
+    const data = { ...work.data, reconciliation: { ...review,
+      previousStatus: work.status, reviewedAt: new Date().toISOString(),
+      decision: 'rejected_before_business_write', automaticRetryAllowed: false } };
+    const encrypted = this.cipher.seal(JSON.stringify(data), this.binding(work.id, work.owner, work.kind, work.dedup));
+    const result = await this.db.query(
+      "UPDATE mcp_auth.work_items SET payload=$1,status='rejected_reviewed',version=version+1,time_version=clock_timestamp() WHERE id=$2 AND owner_hash=$3 AND kind='mutation' AND status='unknown' AND version=$4",
+      [encrypted, work.id, work.owner, work.version]);
+    return result.rowCount === 1;
+  }
+
   async hasUncertain(owner: string): Promise<boolean> {
     const r = await this.db.query(
       "SELECT 1 FROM mcp_auth.work_items WHERE owner_hash=$1 AND kind='mutation' AND status IN ('running','unknown') LIMIT 1",

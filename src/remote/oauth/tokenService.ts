@@ -50,7 +50,8 @@ export class OAuthTokenService {
     private readonly grants: ActiveGrantReader,
     private readonly resource: string,
     private readonly namespace: string,
-    private readonly now = Date.now
+    private readonly now = Date.now,
+    private readonly workbuddy = false
   ) {
     const url = new URL(resource);
     if (
@@ -59,7 +60,7 @@ export class OAuthTokenService {
       url.password ||
       url.hash ||
       url.search ||
-      !/^localsbnb:mcp:(dev|prod):oauth$/.test(namespace)
+      !/^localsbnb:mcp:(dev|prod):oauth(?::workbuddy)?$/.test(namespace)
     )
       throw new Error('Invalid token service configuration');
   }
@@ -123,7 +124,7 @@ export class OAuthTokenService {
     const refresh = `rt.${id}.${randomBytes(32).toString('base64url')}`;
     family.accessHash = hash(access);
     family.refreshHash = hash(refresh);
-    family.accessExpiresAt = Math.min(this.now() + 600_000, family.expiresAt);
+    family.accessExpiresAt = Math.min(this.now() + (this.workbuddy ? 3_600_000 : 600_000), family.expiresAt);
     return {
       access_token: access,
       refresh_token: refresh,
@@ -146,7 +147,7 @@ export class OAuthTokenService {
       refreshHash: '',
       usedRefreshHashes: [],
       accessExpiresAt: 0,
-      expiresAt: Math.min(this.now() + 7 * 86400_000, active.expiresAt.getTime()),
+      expiresAt: Math.min(this.now() + (this.workbuddy ? 30 : 7) * 86400_000, active.expiresAt.getTime()),
       revoked: false,
     };
     const response = this.pair(id, family);

@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "localsbnb": {
+      "type": "streamableHttp",
+      "url": "https://agent-prod.localhome.cn/workbuddy/mcp",
+      "timeout": 30000
+    }
+  }
+}

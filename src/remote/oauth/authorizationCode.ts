@@ -39,6 +39,19 @@ export class OAuthCodeError extends Error {
 
 const digest = (value: string): string => createHash('sha256').update(value).digest('hex');
 
+/** WorkBuddy callback is either its fixed private scheme or a dynamic local loopback port. */
+export function isWorkbuddyRedirect(url: URL): boolean {
+  return (
+    (url.protocol === 'workbuddy:' &&
+      url.hostname === 'workbuddy' &&
+      /^\/mcp\/(?:connector|custom-mcp)%3A[a-z0-9][a-z0-9-]{0,63}\/oauth\/callback$/i.test(url.pathname)) ||
+    (url.protocol === 'http:' &&
+      url.hostname === '127.0.0.1' &&
+      !!url.port &&
+      url.pathname === '/oauth/callback')
+  ) && !url.username && !url.password && !url.hash && !url.search;
+}
+
 export function pkceS256(verifier: string): string {
   if (!/^[A-Za-z0-9._~-]{43,128}$/.test(verifier)) throw new OAuthCodeError('invalid_grant');
   return createHash('sha256').update(verifier, 'ascii').digest('base64url');
@@ -50,13 +63,14 @@ export class AuthorizationCodeService {
     private readonly store: OneTimeCodeStore,
     private readonly resource: string,
     private readonly namespace: string,
-    private readonly now: () => number = Date.now
+    private readonly now: () => number = Date.now,
+    private readonly workbuddy = false
   ) {
     const url = new URL(resource);
     if (url.protocol !== 'https:' || url.username || url.password || url.hash || url.search) {
       throw new Error('OAuth resource must be a credential-free HTTPS URL');
     }
-    if (!/^localsbnb:mcp:(dev|prod):oauth$/.test(namespace))
+    if (!/^localsbnb:mcp:(dev|prod):oauth(?::workbuddy)?$/.test(namespace))
       throw new Error('Invalid OAuth storage namespace');
   }
 
@@ -87,7 +101,7 @@ export class AuthorizationCodeService {
       client.clientId !== grant.clientId ||
       grant.resource !== this.resource ||
       !client.redirectUris.includes(request.redirectUri) ||
-      redirect.protocol !== 'https:' ||
+      !(this.workbuddy ? isWorkbuddyRedirect(redirect) : redirect.protocol === 'https:') ||
       redirect.username ||
       redirect.password ||
       redirect.hash ||
@@ -105,7 +119,7 @@ export class AuthorizationCodeService {
     ) {
       throw new OAuthCodeError('invalid_scope');
     }
-    const expiresIn = 120;
+    const expiresIn = this.workbuddy ? 600 : 120;
     const record: CodeRecord = {
       grantId: grant.grantId,
       clientId: client.clientId,

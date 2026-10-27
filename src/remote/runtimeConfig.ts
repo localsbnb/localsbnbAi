@@ -10,6 +10,7 @@ export interface RuntimeConfig extends RemoteConfig {
   activeKeyId: string;
   keys: Record<string, Buffer>;
   clients: HttpOAuthClient[];
+  workbuddySource?: string;
 }
 /** 专用远程环境变量；不加载 .env 或本地账号文件。错误只返回键名。 */
 export function readRuntimeConfig(
@@ -112,6 +113,9 @@ export function readRuntimeConfig(
   if (bindHost !== '127.0.0.1' && bindHost !== '0.0.0.0')
     throw new Error('Invalid remote bind host');
   const businessEnabled = env.LOCALSBNB_REMOTE_BUSINESS_ENABLED === '1';
+  const workbuddySource = env.LOCALSBNB_WORKBUDDY_SOURCE?.trim();
+  if (workbuddySource && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(workbuddySource))
+    throw new Error('Invalid WorkBuddy source');
   if (
     env.LOCALSBNB_REMOTE_BUSINESS_ENABLED &&
     !['0', '1'].includes(env.LOCALSBNB_REMOTE_BUSINESS_ENABLED)
@@ -131,5 +135,6 @@ export function readRuntimeConfig(
     activeKeyId,
     keys,
     clients,
+    workbuddySource,
   };
 }

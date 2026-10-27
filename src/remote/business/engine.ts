@@ -2,8 +2,9 @@ import Ajv from 'ajv';
 import { randomUUID } from 'node:crypto';
 import type { ToolDefinition, ToolContext, ToolResult } from '../../types/mcp.js';
 import { toolDefinitions, overseasWriteTools } from '../../config/businessTools.js';
+import { getDomesticRemoteOperationTools } from '../../tools/domestic/operationTools.js';
 import { getOverseasOperationTools } from '../../tools/overseas/operationTools.js';
-import { CN_PROFILE, type RegionProfile } from '../../region/types.js';
+import { CN_PROFILE } from '../../region/types.js';
 import { resolveRegionProfile } from '../../region/resolve.js';
 import { getOverseasToolDescription } from '../../region/toolDescriptions.js';
 import { PostgresGrantStore, type PersistentGrant } from '../oauth/postgresGrantStore.js';
@@ -26,12 +27,10 @@ const silent = {
   error: () => undefined,
   debug: () => undefined,
 };
-const listingProfile: RegionProfile = {
-  ...CN_PROFILE,
-  region: 'overseas',
-  locale: 'en',
-  localeCode: 'en',
-};
+const overseasOperationNames = new Set([
+  ...overseasWriteTools({ ...CN_PROFILE, region: 'overseas', locale: 'en' }),
+  ...getOverseasOperationTools(),
+].map((tool) => tool.name));
 const management = [
   {
     name: 'open_property_session',
@@ -74,8 +73,9 @@ export class BusinessEngine {
   ) {
     this.catalog = [
       ...toolDefinitions,
-      ...overseasWriteTools(listingProfile),
+      ...overseasWriteTools({ ...CN_PROFILE, region: 'overseas', locale: 'en' }),
       ...getOverseasOperationTools(),
+      ...getDomesticRemoteOperationTools(),
     ].map((t) => {
       const properties = {
         ...(t.inputSchema.properties ?? {}),
@@ -122,7 +122,8 @@ export class BusinessEngine {
       ])
     );
   }
-  list(identity: Pick<PersistentGrant, 'scopes'>): Array<Omit<ToolDefinition, 'handler'>> {
+  list(identity: Pick<PersistentGrant, 'scopes'> & Partial<Pick<PersistentGrant, 'clientId'>>): Array<Omit<ToolDefinition, 'handler'>> {
+    const workbuddy = identity.clientId?.startsWith('wb_') === true;
     return [
       ...management.map((m) => ({
         name: m.name,
@@ -135,7 +136,8 @@ export class BusinessEngine {
         },
       })),
       ...this.catalog
-        .filter((t) => (t.requiredScopes ?? []).every((s) => identity.scopes.includes(s)))
+        .filter((t) => (workbuddy ? !overseasOperationNames.has(t.name) : !t.name.startsWith('cn_')) &&
+          (t.requiredScopes ?? []).every((s) => identity.scopes.includes(s)))
         .map(({ handler: _handler, requiredScopes, ...t }) => ({
           ...t,
           requiredScopes,
@@ -240,53 +242,63 @@ export class BusinessEngine {
       const tool = this.catalog.find((t) => t.name === name)!;
       if (!(tool.requiredScopes ?? []).every((s) => scopes.includes(s)))
         throw new Error('Property scope denied');
-      const reader = new RemoteHudsonClient(
+      const probe = new RemoteHudsonClient(
         this.hudsonOrigin,
         grant.hudsonCredential,
         grant.campId,
         this.fetcher
       );
-      const writer = new RemoteHudsonClient(
-        this.hudsonOrigin,
-        grant.hudsonCredential,
-        grant.campId,
-        this.fetcher,
-        true
-      );
-      const profile = await resolveRegionProfile(reader, grant.campId, silent);
-      if (profile.region !== 'overseas')
-        throw new Error('Only verified overseas properties are supported');
-      // 远程写入不能依赖查询失败后的默认币种/时区。
-      const settings = await reader.request<{
-        success?: boolean;
-        data?:
-          | { systemConfigs?: Array<{ configCode: string; configValue: string }> }
-          | Array<{ configCode: string; configValue: string }>;
-      }>({
-        method: 'POST',
-        url: '/systemConfigs/get',
-        data: {
-          campId: grant.campId,
-          systemConfigCodes: ['hudson.bnbBasic.currency', 'hudson.bnbBasic.timeZone'],
-        },
+      const campCheck = await probe.request<{ success?: boolean; data?: { isBnb?: number | string | boolean } }>({
+        method: 'POST', url: '/camp/get', data: { campId: grant.campId },
       });
-      const rows = Array.isArray(settings.data)
-        ? settings.data
-        : (settings.data?.systemConfigs ?? []);
-      if (
-        settings.success !== true ||
-        !['hudson.bnbBasic.currency', 'hudson.bnbBasic.timeZone'].every((code) =>
-          rows.some((r) => r.configCode === code && r.configValue)
+      if (campCheck.success !== true || campCheck.data?.isBnb === undefined)
+        throw new Error('Property edition could not be verified');
+      const verifiedOverseas = Number(campCheck.data.isBnb) === 1 || campCheck.data.isBnb === true;
+      const profile = await resolveRegionProfile(probe, grant.campId, silent);
+      if ((profile.region === 'overseas') !== verifiedOverseas)
+        throw new Error('Property edition changed or could not be verified');
+      const reader = new RemoteHudsonClient(this.hudsonOrigin, grant.hudsonCredential,
+        grant.campId, this.fetcher, false, profile.region);
+      const writer = new RemoteHudsonClient(this.hudsonOrigin, grant.hudsonCredential,
+        grant.campId, this.fetcher, true, profile.region);
+      if (!verifiedOverseas && ![...toolDefinitions, ...getDomesticRemoteOperationTools()]
+        .some((definition) => definition.name === name))
+        throw new Error('This domestic operation is not available remotely');
+      if (verifiedOverseas && name.startsWith('cn_'))
+        throw new Error('Domestic operations cannot be used for an overseas property');
+      // 远程写入不能依赖查询失败后的默认币种/时区。
+      if (verifiedOverseas) {
+        const settings = await reader.request<{
+          success?: boolean;
+          data?:
+            | { systemConfigs?: Array<{ configCode: string; configValue: string }> }
+            | Array<{ configCode: string; configValue: string }>;
+        }>({
+          method: 'POST',
+          url: '/systemConfigs/get',
+          data: {
+            campId: grant.campId,
+            systemConfigCodes: ['hudson.bnbBasic.currency', 'hudson.bnbBasic.timeZone'],
+          },
+        });
+        const rows = Array.isArray(settings.data)
+          ? settings.data
+          : (settings.data?.systemConfigs ?? []);
+        if (
+          settings.success !== true ||
+          !['hudson.bnbBasic.currency', 'hudson.bnbBasic.timeZone'].every((code) =>
+            rows.some((r) => r.configCode === code && r.configValue)
+          )
         )
-      )
-        throw new Error('Property currency/timezone unavailable');
-      if (
-        rows.find((r) => r.configCode === 'hudson.bnbBasic.currency')?.configValue !==
-          profile.currency ||
-        rows.find((r) => r.configCode === 'hudson.bnbBasic.timeZone')?.configValue !==
-          profile.hudsonTimeZone
-      )
-        throw new Error('Property settings changed; retry query');
+          throw new Error('Property currency/timezone unavailable');
+        if (
+          rows.find((r) => r.configCode === 'hudson.bnbBasic.currency')?.configValue !==
+            profile.currency ||
+          rows.find((r) => r.configCode === 'hudson.bnbBasic.timeZone')?.configValue !==
+            profile.hudsonTimeZone
+        )
+          throw new Error('Property settings changed; retry query');
+      }
       const preview = persistentPreview(this.store, scope, writer, async () => {
         const active = await this.grants.readActive(
           grant.grantId,
@@ -311,6 +323,7 @@ export class BusinessEngine {
           },
         },
         remote: {
+          hudsonOrigin: this.hudsonOrigin,
           preview: (input) =>
             preview({
               ...input,
