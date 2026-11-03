@@ -10,7 +10,7 @@ export async function domesticChannelLaunch(context: ToolContext, channelId: str
   const apiOrigin = context.remote ? context.remote.hudsonOrigin : config.api.baseURL;
   const sites: Record<string, { origin: string; environment: string }> = {
     'https://hudson-dev.localhome.cn': { origin: 'https://h-dev.localhome.cn', environment: 'dev' },
-    'https://hudson-prod.localhome.cn': { origin: 'https://h.localhome.cn', environment: 'prod' },
+    'https://hudson-prod.localhome.cn': { origin: 'https://minsubao.localhome.cn', environment: 'prod' },
   };
   const site = apiOrigin && sites[apiOrigin];
   if (!site) invalid('Domestic PC authorization environment is not configured');
