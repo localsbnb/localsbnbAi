@@ -11,6 +11,8 @@ export interface RuntimeConfig extends RemoteConfig {
   keys: Record<string, Buffer>;
   clients: HttpOAuthClient[];
   workbuddySource?: string;
+  deviceFlowEnabled?: boolean;
+  workbuddyCloudEnabled?: boolean;
 }
 /** 专用远程环境变量；不加载 .env 或本地账号文件。错误只返回键名。 */
 export function readRuntimeConfig(
@@ -116,6 +118,10 @@ export function readRuntimeConfig(
   const workbuddySource = env.LOCALSBNB_WORKBUDDY_SOURCE?.trim();
   if (workbuddySource && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(workbuddySource))
     throw new Error('Invalid WorkBuddy source');
+  const cloudFlag = env.LOCALSBNB_WORKBUDDY_CLOUD_OAUTH_ENABLED;
+  if (cloudFlag && !['0', '1'].includes(cloudFlag)) throw new Error('Invalid WorkBuddy cloud OAuth flag');
+  const workbuddyCloudEnabled = cloudFlag === '1';
+  if (workbuddyCloudEnabled && !workbuddySource) throw new Error('WorkBuddy cloud OAuth requires WorkBuddy source');
   if (
     env.LOCALSBNB_REMOTE_BUSINESS_ENABLED &&
     !['0', '1'].includes(env.LOCALSBNB_REMOTE_BUSINESS_ENABLED)
@@ -124,6 +130,11 @@ export function readRuntimeConfig(
   const handshakeSecret = env.LOCALSBNB_REMOTE_HANDSHAKE_SECRET;
   if (businessEnabled && !/^[a-f0-9]{64}$/.test(handshakeSecret ?? ''))
     throw new Error('Remote business requires dedicated handshake service secret');
+  const deviceFlowFlag = env.LOCALSBNB_WORKBUDDY_DEVICE_FLOW_ENABLED;
+  if (deviceFlowFlag && !['0', '1'].includes(deviceFlowFlag)) throw new Error('Invalid device flow flag');
+  const deviceFlowEnabled = deviceFlowFlag === '1';
+  if (deviceFlowEnabled && (base.environment !== 'dev' || !workbuddySource))
+    throw new Error('Device flow preview requires dev WorkBuddy');
   return {
     ...base,
     bindHost,
@@ -136,5 +147,7 @@ export function readRuntimeConfig(
     keys,
     clients,
     workbuddySource,
+    deviceFlowEnabled,
+    workbuddyCloudEnabled,
   };
 }

@@ -74,11 +74,11 @@ const DESC: Record<ToolName, Record<AppLocale, string>> = {
     'zh-TW': '預離訂單（今日待退房）。離店日=今天且子單狀態=入住中。',
   },
   query_orders_by_date_range: {
-    en: 'Orders in a date range. Default searches by check-in date. Use timeRange=this_week/last_week or startDate+endDate. Do not mix with the today board tools.',
+    en: 'Orders in a date range. Default statusFilter=active excludes cancelled orders. Use cancelled only when explicitly requested, or all for an explicit all-orders request. Always report order status. Default searches by check-in date. Use timeRange=this_week/last_week or startDate+endDate. Do not mix with the today board tools.',
     ja: '期間指定の予約。既定はチェックイン日。timeRange または startDate+endDate。本日ボードツールと混在させない。',
     th: 'คำสั่งตามช่วงวันที่ ค่าเริ่มค้นตามวันเช็คอิน ใช้ timeRange หรือ startDate+endDate',
     ms: 'Pesanan mengikut julat. Lalai ikut tarikh daftar masuk. Guna timeRange atau startDate+endDate.',
-    'zh-CN': '按日期范围查订单。默认按入住日。支持 startDate/endDate 或 timeRange=this_week/last_week。不要与今日预抵/在住/预离混用。',
+    'zh-CN': '按日期范围查订单。默认 statusFilter=active 排除取消订单；明确查询取消订单时用 cancelled，明确全部订单时用 all；必须说明订单状态。默认按入住日。支持 startDate/endDate 或 timeRange=this_week/last_week。不要与今日预抵/在住/预离混用。',
     'zh-TW': '依日期範圍查訂單。預設按入住日。支援 startDate/endDate 或 timeRange。',
   },
   get_order_details_v2: {

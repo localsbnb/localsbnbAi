@@ -139,7 +139,7 @@ export const queryTodayRoomStatusHandler: ToolHandler = async (args, context) =>
         isShowLiveDirty: 0,
         isShowOcc: 0,
         isShowAll: 1,
-        isAvailability: null,
+        isAvailability: 1,
         roomCategoryType: null,
       },
     });

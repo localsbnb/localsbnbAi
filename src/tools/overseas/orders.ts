@@ -18,6 +18,7 @@ import {
   t,
   toZoneStartMs,
 } from '../../region/index.js';
+import { orderStatusFilterSchema, orderStatusFilters, orderStateLabel, type OrderStatusFilter } from '../orders/orderStatus.js';
 import { MCPError, ErrorCode, isOrderNotFoundError } from '../../utils/errorHandler.js';
 
 export interface OverseasOrderRow {
@@ -52,6 +53,7 @@ export async function fetchOverseasOrderPage(
     dateTimeSearchType: number;
     startDate: string;
     endDate: string;
+    statusFilter?: OrderStatusFilter;
     orderDetailStates?: number[];
     searchKey?: string;
     pageNum: number;
@@ -62,6 +64,7 @@ export async function fetchOverseasOrderPage(
   const tz = profileOf(context).ianaTimeZone;
   // Hudson BnbOrderDetailsPageGetRequest：startDate/endDate 均需当日 0 点（@BeginOfDay）。
   // 传日末时间戳会触发 date 联合校验（date:trigger union validation / 触发联合验证）。
+  const filters = orderStatusFilters(params.statusFilter);
   const data = await hudsonPost<unknown>(
     context,
     '/bnbOrderDetails/page/get',
@@ -71,7 +74,8 @@ export async function fetchOverseasOrderPage(
       dateTimeSearchType: params.dateTimeSearchType,
       startDate: toZoneStartMs(params.startDate, tz),
       endDate: toZoneStartMs(params.endDate, tz),
-      orderDetailStates: params.orderDetailStates,
+      ...filters,
+      orderDetailStates: params.orderDetailStates ?? filters.orderDetailStates,
       pageNum: params.pageNum,
       pageSize: params.pageSize,
     },
@@ -121,7 +125,7 @@ export function formatOverseasOrderList(
         `${t(locale, 'label.guest')}：${pickGuest(order)}｜${t(locale, 'label.channel')}：${channelDisplayName(order.orderChannelId ?? order.channelId)}｜` +
         `${t(locale, 'label.roomType')}：${order.roomCategoryName || '-'}｜${t(locale, 'label.room')}：${order.roomName || '-'}｜` +
         `${t(locale, 'label.stay')}：${stay}｜${t(locale, 'label.nights')}：${order.nights ?? '-'}｜` +
-        `${detailStateLabel(locale, order.orderDetailState)}｜` +
+        `${locale.startsWith('zh') ? '订单状态' : 'Order status'}：${orderStateLabel(order.orderState, locale)} (${order.orderState ?? '?'})｜${locale.startsWith('zh') ? '明细状态' : 'Detail status'}：${order.orderDetailState == null ? orderStateLabel(undefined, locale) : detailStateLabel(locale, order.orderDetailState)}｜` +
         `${t(locale, 'label.netFare')}：${formatFen(order.reduceCommissionRoomPrice ?? order.accommodationFare, profile.currency)}｜` +
         `${t(locale, 'label.commission')}：${formatFen(order.commissionPrice ?? order.commission, profile.currency)}｜` +
         `${t(locale, 'label.paid')}：${formatFen(order.paid, profile.currency)}${weekend}`
@@ -315,10 +319,12 @@ export async function queryOrdersByDateRangeOverseas(
   });
   const pageNum = Number(args.pageNum) || 1;
   const pageSize = Number(args.pageSize) || 10;
+  const statusFilter = orderStatusFilterSchema.parse(args.statusFilter);
   const data = await fetchOverseasOrderPage(context, {
     dateTimeSearchType: 1,
     startDate: range.startDate,
     endDate: range.endDate,
+    statusFilter,
     pageNum,
     pageSize,
   });
@@ -330,7 +336,7 @@ export async function queryOrdersByDateRangeOverseas(
   return textResult(
     formatOverseasOrderList(
       context,
-      `${t(profile.locale, 'title.dateRange')}：${rangeLabel}`,
+      `${t(profile.locale, 'title.dateRange')}：${rangeLabel} [${statusFilter}]`,
       data.list,
       data.total,
       pageNum,
@@ -383,6 +389,7 @@ export async function getOrderDetailsOverseas(
     t(profile.locale, 'guest.mustShow'),
     `${t(profile.locale, 'label.orderId')}：${data.orderId}`,
     `${t(profile.locale, 'label.guest')}：${guest}`,
+    `Order status: ${orderStateLabel(data.orderState, profile.locale)} (${data.orderState ?? '?'})`,
     `${t(profile.locale, 'label.channel')}：${channelDisplayName(data.orderChannelId ?? data.channelId)}`,
     `${t(profile.locale, 'label.stay')}：${formatApiDate(first.checkInDate ?? first.expectCheckInTime, profile.ianaTimeZone)} ~ ${formatApiDate(first.checkOutDate ?? first.expectCheckOutTime, profile.ianaTimeZone)}`,
     `${t(profile.locale, 'label.room')}：${first.roomName || '-'}`,

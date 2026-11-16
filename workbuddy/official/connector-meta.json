@@ -1,0 +1,34 @@
+{
+  "name": "路客云",
+  "name_zh": "路客云",
+  "name_en": "LocalsBnb",
+  "description": "连接已授权门店，查询房态、房价、订单与经营数据，并在确认后执行订单、房态、改价及渠道操作。",
+  "description_zh": "连接已授权门店，查询房态、房价、订单与经营数据，并在确认后执行订单、房态、改价及渠道操作。",
+  "description_en": "Manage authorized properties: query rooms, rates, orders and operations; preview and confirm changes.",
+  "source": "localsbnb",
+  "type": "mcp",
+  "version": "1.0.0",
+  "minWorkbuddyVersion": "4.24.0",
+  "auth_mode": "server-side",
+  "server_auth": {
+    "auth_type": "mcp_oauth",
+    "data": {
+      "mcp_oauth": {
+        "server_url": "https://agent-prod.localhome.cn/workbuddy/mcp",
+        "scopes": "rooms:read rooms:write orders:read orders:write finance:read channels:read channels:write"
+      }
+    }
+  },
+  "examples_zh": [
+    "查询我授权门店今天的房态和待入住订单",
+    "统计上周入住率和平均房价",
+    "先预览指定房源明天改价为499元，等我确认后再执行",
+    "连接美团民宿，给我实际授权入口，完成后核验连接状态"
+  ],
+  "examples_en": [
+    "Show today's room status and upcoming arrivals for my authorized property",
+    "Show last week's occupancy and average daily rate",
+    "Preview a rate change for my selected listing and wait for confirmation",
+    "Open the supported channel connection page and verify the result after I finish"
+  ]
+}

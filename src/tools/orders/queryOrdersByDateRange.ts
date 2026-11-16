@@ -3,6 +3,7 @@ import { handleToolError } from '../../utils/errorHandler.js';
 import { isOverseas } from '../../region/index.js';
 import { queryOrdersByDateRangeOverseas } from '../overseas/orders.js';
 import { getLastWeekRange, getThisWeekRange, getTodayShanghai } from '../../utils/shanghaiDate.js';
+import { orderStatusFilterSchema } from './orderStatus.js';
 import { z } from 'zod';
 import { fetchOrdersByDateRange, formatOrderList } from './ordersGetShared.js';
 
@@ -10,6 +11,7 @@ const dateStrSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, '日期须为 YYYY
 
 const schema = z
   .object({
+    statusFilter: orderStatusFilterSchema,
     startDate: dateStrSchema.optional(),
     endDate: dateStrSchema.optional(),
     timeRange: z.enum(['this_week', 'last_week']).optional(),
@@ -61,7 +63,7 @@ export const queryOrdersByDateRangeHandler: ToolHandler = async (args, context) 
     const { logger, permissionChecker } = context;
     permissionChecker.checkPermission('query_orders_by_date_range', ['orders:read']);
     if (isOverseas(context)) {
-      return queryOrdersByDateRangeOverseas(args, context);
+      return await queryOrdersByDateRangeOverseas(args, context);
     }
     const params = schema.parse(args);
     const range = resolveQueryDateRange(params);
@@ -70,7 +72,8 @@ export const queryOrdersByDateRangeHandler: ToolHandler = async (args, context) 
       range.startDate,
       range.endDate,
       params.pageNum,
-      params.pageSize
+      params.pageSize,
+      params.statusFilter
     );
     const rangeLabel =
       range.startDate === range.endDate ? range.startDate : `${range.startDate} ~ ${range.endDate}`;
@@ -87,7 +90,7 @@ export const queryOrdersByDateRangeHandler: ToolHandler = async (args, context) 
       content: [
         {
           type: 'text',
-          text: formatOrderList(`订单查询（日期范围：${rangeLabel}）`, data.list, data.total, params.pageNum, params.pageSize),
+          text: formatOrderList(`订单查询（日期范围：${rangeLabel}；状态范围：${{ active: '非取消订单', cancelled: '已取消订单', all: '全部订单' }[params.statusFilter]}）`, data.list, data.total, params.pageNum, params.pageSize),
         },
       ],
     };

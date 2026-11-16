@@ -1,9 +1,13 @@
 import type { ToolContext } from '../../types/mcp.js';
 import { assertApiSuccess } from '../../utils/errorHandler.js';
 import { desensitizeOrderItem } from '../../utils/desensitize.js';
+import { orderStatusFilters, orderStateLabel, type OrderStatusFilter } from './orderStatus.js';
+import { detailStateLabel } from '../../region/i18n.js';
 import { fenToYuanString } from '../../utils/price.js';
 
 export interface OrderItem {
+  orderState?: number;
+  orderDetailState?: number;
   orderId: number;
   orderDetailId: number;
   channelName: string;
@@ -60,6 +64,7 @@ export async function fetchOrdersByType(
     data: {
       campId: String(campId),
       orderType,
+      ...orderStatusFilters(),
       pageNum,
       keyword,
       pageSize,
@@ -77,7 +82,8 @@ export async function fetchOrdersByDateRange(
   startDate: string,
   endDate: string,
   pageNum = 1,
-  pageSize = 10
+  pageSize = 10,
+  statusFilter: OrderStatusFilter = 'active'
 ): Promise<{ list: OrderItem[]; total: number }> {
   const { apiClient } = context;
   const campId = context.campId;
@@ -91,6 +97,7 @@ export async function fetchOrdersByDateRange(
       campId: String(campId),
       pageNum,
       pageSize,
+      ...orderStatusFilters(statusFilter),
       checkInDate: toShanghaiTimestampStart(startDate),
       checkOutDate: toShanghaiTimestampStart(endDate),
     },
@@ -135,6 +142,7 @@ export function formatOrderList(
   for (const [idx, order] of list.entries()) {
     lines.push(
       `${idx + 1}. 订单ID：${order.orderId}｜明细ID：${order.orderDetailId}｜客人：${pickGuestName(order)}｜` +
+        `订单状态：${orderStateLabel(order.orderState)}（${order.orderState ?? '未知'}）｜明细状态：${order.orderDetailState == null ? '状态未知' : detailStateLabel('zh-CN', order.orderDetailState)}｜` +
         `渠道：${order.channelName || '-'}｜房型：${order.roomCategoryName || '-'}｜房间：${order.roomName || '-'}｜` +
         `入离：${order.checkInDateStr || '-'} ~ ${order.checkOutDateStr || '-'}｜` +
         `房费减佣：${fenToYuanString(order.reduceCommissionRoomPrice)}｜佣金：${fenToYuanString(order.invoicePrice)}｜` +

@@ -14,7 +14,8 @@ export class RemoteHandshake {
     private readonly grants: PostgresGrantStore,
     private readonly siteOrigin: string,
     private readonly resource: string,
-    private readonly environment: 'dev' | 'prod'
+    private readonly environment: 'dev' | 'prod',
+    private readonly workbuddyResource?: string
   ) {}
   private owner(): string {
     return hash('handshake:' + this.resource);
@@ -24,14 +25,16 @@ export class RemoteHandshake {
     clientId: string,
     campId: string,
     channel: RemoteChannel,
-    sourceGrantId = grantId
+    sourceGrantId = grantId,
+    resource = this.resource
   ): Promise<{ openUrl: string; expiresAt: Date }> {
     if (!Object.hasOwn(CHANNEL_TARGETS, channel)) throw new Error('Invalid channel');
+    if (resource !== this.resource && resource !== this.workbuddyResource) throw new Error('Invalid resource');
     const work = await this.store.create(
       this.owner(),
       'handshake',
       randomUUID(),
-      { grantId, sourceGrantId, clientId, campId, channel },
+      { grantId, sourceGrantId, clientId, campId, channel, resource },
       120
     );
     return { openUrl: `${this.siteOrigin}/ai/connect/${work.id}`, expiresAt: work.expiresAt };
@@ -51,17 +54,20 @@ export class RemoteHandshake {
       clientId: string;
       campId: string;
       channel: RemoteChannel;
+      resource?: string;
     }>(this.owner(), ticket, 'handshake');
     if (!work || work.status !== 'pending') throw new Error('Ticket unavailable');
+    const resource = work.data.resource ?? this.resource;
+    if (resource !== this.resource && resource !== this.workbuddyResource) throw new Error('Ticket unavailable');
     const grant = await this.grants.readActive(
       work.data.grantId,
       work.data.clientId,
-      this.resource
+      resource
     );
     const source = await this.grants.readActive(
       work.data.sourceGrantId,
       work.data.clientId,
-      this.resource
+      resource
     );
     if (
       !source ||

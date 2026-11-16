@@ -122,7 +122,7 @@ export class BusinessEngine {
       ])
     );
   }
-  list(identity: Pick<PersistentGrant, 'scopes'> & Partial<Pick<PersistentGrant, 'clientId'>>): Array<Omit<ToolDefinition, 'handler'>> {
+  list(identity: Pick<PersistentGrant, 'scopes'> & Partial<Pick<PersistentGrant, 'clientId'>>, options: { workbuddyCloud?: boolean } = {}): Array<Omit<ToolDefinition, 'handler'>> {
     const workbuddy = identity.clientId?.startsWith('wb_') === true;
     return [
       ...management.map((m) => ({
@@ -136,7 +136,7 @@ export class BusinessEngine {
         },
       })),
       ...this.catalog
-        .filter((t) => (workbuddy ? !overseasOperationNames.has(t.name) : !t.name.startsWith('cn_')) &&
+        .filter((t) => (workbuddy ? options.workbuddyCloud || !overseasOperationNames.has(t.name) : !t.name.startsWith('cn_')) &&
           (t.requiredScopes ?? []).every((s) => identity.scopes.includes(s)))
         .map(({ handler: _handler, requiredScopes, ...t }) => ({
           ...t,
@@ -162,9 +162,10 @@ export class BusinessEngine {
   async call(
     identity: PersistentGrant,
     name: string,
-    args: Record<string, unknown>
+    args: Record<string, unknown>,
+    options: { workbuddyCloud?: boolean } = {}
   ): Promise<ToolResult> {
-    const definition = this.list(identity).find((t) => t.name === name);
+    const definition = this.list(identity, options).find((t) => t.name === name);
     if (!definition) throw new Error('Tool not authorized');
     if (!this.ajv.validate(definition.inputSchema as object, args))
       throw new Error('Invalid tool arguments');
@@ -342,7 +343,8 @@ export class BusinessEngine {
           ctx,
           grant.grantId,
           identity.clientId,
-          identity.grantId
+          identity.grantId,
+          identity.resource
         );
       if (name === 'complete_channel_connection') return await this.flows.complete(scope, ctx);
       const { sessionId, ...businessArgs } = args;

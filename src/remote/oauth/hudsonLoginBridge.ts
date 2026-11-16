@@ -13,6 +13,7 @@ export class BrowserAuthError extends Error {
       | 'no_properties'
       | 'property_forbidden'
       | 'credential_setup_required'
+      | 'credential_enable_failed'
       | 'signup_failed'
       | 'signup_unavailable'
   ) {

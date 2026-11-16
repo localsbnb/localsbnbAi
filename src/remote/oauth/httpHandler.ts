@@ -1,3 +1,4 @@
+import { DeviceAuthorizationError, DEVICE_GRANT_TYPE, type DeviceAuthorization } from './deviceAuthorization.js';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { createHash, timingSafeEqual } from 'node:crypto';
 import {
@@ -10,6 +11,7 @@ import { OAuthTokenService, OAuthTokenError } from './tokenService.js';
 export type HttpOAuthClient = RegisteredOAuthClient &
   ({ authMethod: 'none' } | { authMethod: 'client_secret_basic'; secretSha256: string });
 export interface OAuthHttpOptions {
+  deviceAuthorization?: Pick<DeviceAuthorization, 'poll' | 'client'>;
   issuer: string;
   resource: string;
   clients: readonly HttpOAuthClient[];
@@ -186,7 +188,8 @@ export function createOAuthHttpHandler(
           revocation_endpoint: `${issuer.origin}${revokePath}`,
           ...(options.resolveClient ? { registration_endpoint: `${issuer.origin}/oauth/register` } : {}),
           response_types_supported: ['code'],
-          grant_types_supported: ['authorization_code', 'refresh_token'],
+          grant_types_supported: ['authorization_code', 'refresh_token', ...(options.deviceAuthorization ? [DEVICE_GRANT_TYPE] : [])],
+          ...(options.deviceAuthorization ? { device_authorization_endpoint: issuer.origin + '/oauth/device_authorization' } : {}),
           code_challenge_methods_supported: ['S256'],
           token_endpoint_auth_methods_supported: ['none', 'client_secret_basic'],
           revocation_endpoint_auth_methods_supported: ['none', 'client_secret_basic'],
@@ -231,12 +234,15 @@ export function createOAuthHttpHandler(
         return;
       }
       const grantType = required(form, 'grant_type');
-      if (!['authorization_code', 'refresh_token'].includes(grantType))
+      if (!['authorization_code', 'refresh_token', ...(options.deviceAuthorization ? [DEVICE_GRANT_TYPE] : [])].includes(grantType))
         throw new HttpError(400, 'unsupported_grant_type');
       const resource = required(form, 'resource');
       if (resource !== (isWorkbuddy ? options.workbuddyResource : options.resource)) throw new HttpError(400, 'invalid_target');
       if (form.has('scope')) throw new HttpError(400, 'invalid_scope'); // 初期仅使用授权时的完整 scope。
-      if (grantType === 'authorization_code') {
+      if (grantType === DEVICE_GRANT_TYPE) {
+        if (client.clientId !== options.deviceAuthorization?.client.clientId) throw new HttpError(401, 'invalid_client');
+        send(res, 200, await options.deviceAuthorization.poll(form));
+      } else if (grantType === 'authorization_code') {
         const redirectUri = required(form, 'redirect_uri');
         if (!client.redirectUris.includes(redirectUri)) throw new HttpError(400, 'invalid_grant');
         const approved = await codeService.redeem(client.clientId, {
@@ -261,13 +267,14 @@ export function createOAuthHttpHandler(
       const status =
         error instanceof HttpError
           ? error.status
-          : error instanceof OAuthCodeError || error instanceof OAuthTokenError
+          : error instanceof OAuthCodeError || error instanceof OAuthTokenError || error instanceof DeviceAuthorizationError
             ? 400
             : 503;
       const code =
         error instanceof HttpError ||
         error instanceof OAuthCodeError ||
-        error instanceof OAuthTokenError
+        error instanceof OAuthTokenError ||
+        error instanceof DeviceAuthorizationError
           ? error.code
           : 'temporarily_unavailable';
       if (tokenRequest) options.onTokenDiagnostic?.({ phase: 'rejected', status, error: code });

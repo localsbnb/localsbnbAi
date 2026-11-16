@@ -13,7 +13,9 @@ const id = (value: unknown): string => {
 export class WorkbuddyLoginBridge implements BrowserLoginBridge {
   private readonly origin: string;
   private readonly overseas: HudsonLoginBridge;
-  constructor(environment: 'dev' | 'prod', private readonly fetcher: typeof fetch = fetch) {
+  private readonly creationAttempts = new Set<string>();
+  constructor(environment: 'dev' | 'prod', private readonly fetcher: typeof fetch = fetch,
+    private readonly claimCredentialCreation?: (subjectId: string, campId: string) => Promise<boolean>) {
     this.origin = environment === 'dev' ? 'https://hudson-dev.localhome.cn' : 'https://hudson-prod.localhome.cn';
     this.overseas = new HudsonLoginBridge(environment, fetcher);
   }
@@ -54,7 +56,7 @@ export class WorkbuddyLoginBridge implements BrowserLoginBridge {
     if (own.success !== true || campsResponse.success !== true) throw new BrowserAuthError('login_failed');
     const rawCamps = record(campsResponse.data).camps;
     if (!Array.isArray(rawCamps)) throw new BrowserAuthError('no_properties');
-    const candidates = rawCamps.map((c) => ({ campId: id(record(c).campId), name: String(record(c).name ?? '门店') }));
+    const candidates = rawCamps.map((c) => ({ campId: id(record(c).campId), name: String(record(c).name ?? '企业') }));
     const editions = await Promise.all(candidates.map(async (camp) => {
       const detail = await this.post('/camp/get', { campId: camp.campId }, token, camp.campId);
       return detail.success === true && Number(record(detail.data).isBnb) === 0 ? camp : null;
@@ -76,8 +78,24 @@ export class WorkbuddyLoginBridge implements BrowserLoginBridge {
     if (camp.success !== true || (Number(record(camp.data).isBnb) === 1) !== (edition === 'overseas'))
       throw new BrowserAuthError('property_forbidden');
     const secret = await this.post('/user/secret/get', { campId }, session.loginToken, campId);
-    if (secret.success !== true || typeof secret.data !== 'string' || !secret.data.trim())
+    if (secret.success !== true || typeof secret.data !== 'string')
       throw new BrowserAuthError('credential_setup_required');
-    return { subjectId: session.subjectId, credential: secret.data.trim() };
+    if (secret.data.trim()) return { subjectId: session.subjectId, credential: secret.data.trim() };
+    // Explicit absence only; claim once across concurrent consent flows before generating.
+    try {
+      const key = `${session.subjectId}:${campId}`;
+      const claimed = this.claimCredentialCreation
+        ? await this.claimCredentialCreation(session.subjectId, campId)
+        : !this.creationAttempts.has(key);
+      if (claimed && !this.claimCredentialCreation) this.creationAttempts.add(key);
+      // Recheck after claiming: another browser/PC may have enabled access meanwhile.
+      const current = await this.post('/user/secret/get', { campId }, session.loginToken, campId);
+      if (current.success !== true || typeof current.data !== 'string') throw new Error();
+      if (current.data.trim()) return { subjectId: session.subjectId, credential: current.data.trim() };
+      if (!claimed) throw new Error();
+      const enabled = await this.post('/user/secret/generate', { campId }, session.loginToken, campId);
+      if (enabled.success !== true || typeof enabled.data !== 'string' || !enabled.data.trim()) throw new Error();
+      return { subjectId: session.subjectId, credential: enabled.data.trim() };
+    } catch { throw new BrowserAuthError('credential_enable_failed'); }
   }
 }

@@ -1,4 +1,4 @@
-import { timingSafeEqual } from 'node:crypto';
+import { createHash, timingSafeEqual } from 'node:crypto';
 import { WorkStore } from './business/workStore.js';
 import { BusinessEngine } from './business/engine.js';
 import { ChannelFlows } from './business/channelFlows.js';
@@ -8,7 +8,8 @@ import { Server } from 'mcp-remote-sdk/server/index.js';
 import { StreamableHTTPServerTransport } from 'mcp-remote-sdk/server/streamableHttp.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from 'mcp-remote-sdk/types.js';
 import { createOAuthHttpHandler, readOAuthForm } from './oauth/httpHandler.js';
-import { createBrowserAuthorization } from './oauth/browserAuthorization.js';
+import { DeviceAuthorization, DeviceAuthorizationError, DEVICE_CLIENT_ID } from './oauth/deviceAuthorization.js';
+import { createBrowserAuthorization, renderDevicePage } from './oauth/browserAuthorization.js';
 import { AuthorizationCodeService } from './oauth/authorizationCode.js';
 import { OAuthTokenService, OAuthTokenError } from './oauth/tokenService.js';
 import { CredentialCipher } from './oauth/credentialCipher.js';
@@ -63,7 +64,8 @@ export function createRemoteRuntime(
   const workbuddyNamespace = `${namespace}:workbuddy`;
   const workbuddyStore = new RedisAuthorizationCodeStore(dependencies.redis);
   const workbuddyClients = config.workbuddySource
-    ? new WorkbuddyClients(workbuddyStore, workbuddyNamespace, config.workbuddySource)
+    ? new WorkbuddyClients(workbuddyStore, workbuddyNamespace, config.workbuddySource, config.workbuddyCloudEnabled,
+      event => console.info(JSON.stringify({ component: 'workbuddy_registration', ...event })))
     : undefined;
   const workbuddyCodes = workbuddyClients
     ? new AuthorizationCodeService(workbuddyStore, workbuddyResource, workbuddyNamespace, Date.now, true)
@@ -71,13 +73,19 @@ export function createRemoteRuntime(
   const workbuddyTokens = workbuddyClients
     ? new OAuthTokenService(new RedisTokenFamilyStore(dependencies.redis), grants, workbuddyResource, workbuddyNamespace, Date.now, true)
     : undefined;
+  const deviceAuthorization = config.deviceFlowEnabled && workbuddyTokens
+    ? new DeviceAuthorization(workbuddyStore, config.publicOrigin, workbuddyNamespace, grant => workbuddyTokens.issue(grant))
+    : undefined;
+  const resolveWorkbuddyClient = async (id: string) =>
+    deviceAuthorization?.client.clientId === id ? deviceAuthorization.client : workbuddyClients?.get(id);
   const workStore = new WorkStore(dependencies.db, cipher);
   const handshake = new RemoteHandshake(
     workStore,
     grants,
     config.siteOrigin,
     config.resourceUrl,
-    config.environment
+    config.environment,
+    workbuddyResource
   );
   const business = new BusinessEngine(
     grants,
@@ -89,14 +97,23 @@ export function createRemoteRuntime(
   const discoverableScopes = [...new Set(config.clients.flatMap((client) => client.allowedScopes))];
   const allowRequest = createRateLimiter(dependencies.redis, namespace);
   const authorization = createBrowserAuthorization({
+    workbuddyCloudEnabled: config.workbuddyCloudEnabled,
+    ...(deviceAuthorization ? { deviceAuthorization: {
+      clientId: deviceAuthorization.client.clientId,
+      validateBrowserRequest: query => deviceAuthorization.validateBrowserRequest(query),
+      decide: (state, grant) => deviceAuthorization.decide(state, grant),
+    } } : {}),
     issuer: config.publicOrigin,
     namespace,
     clients: config.clients,
     ...(workbuddyClients ? {
       workbuddyResource,
-      workbuddyBridge: new WorkbuddyLoginBridge(config.environment, dependencies.businessFetch),
+      workbuddyBridge: new WorkbuddyLoginBridge(config.environment, dependencies.businessFetch,
+        (subjectId, campId) => workbuddyStore.putIfAbsent(
+          `${workbuddyNamespace}:credential-create:${createHash('sha256').update(JSON.stringify([subjectId, campId])).digest('hex')}`,
+          'attempted', 1800)),
       workbuddyCodes,
-      resolveClient: (id: string) => workbuddyClients.get(id),
+      resolveClient: resolveWorkbuddyClient,
     } : {}),
     store: new RedisAuthorizationCodeStore(dependencies.redis),
     cipher,
@@ -106,6 +123,7 @@ export function createRemoteRuntime(
     onDiagnostic: (event) => console.info(JSON.stringify({ component: 'browser_oauth', ...event })),
   });
   const oauth = createOAuthHttpHandler({
+    ...(deviceAuthorization ? { deviceAuthorization } : {}),
     issuer: config.publicOrigin,
     resource: config.resourceUrl,
     clients: config.clients,
@@ -113,7 +131,7 @@ export function createRemoteRuntime(
       workbuddyResource,
       workbuddyCodes,
       workbuddyTokens,
-      resolveClient: (id: string) => workbuddyClients.get(id),
+      resolveClient: resolveWorkbuddyClient,
       scopesSupported: [...new Set([...config.clients.flatMap((c) => c.allowedScopes), ...WORKBUDDY_SCOPES])],
     } : {}),
     codes,
@@ -170,6 +188,36 @@ export function createRemoteRuntime(
         }
         return;
       }
+      const deviceUrl = new URL(req.url ?? '/', config.publicOrigin);
+      if (deviceAuthorization && ['/device', '/oauth/device_authorization'].includes(deviceUrl.pathname)) {
+        if (!(await allowRequest(req))) { json(res, 429, { error: 'rate_limited' }); return; }
+        try {
+          if (deviceUrl.pathname === '/oauth/device_authorization') {
+            if (req.method !== 'POST' || deviceUrl.search || req.headers.origin) {
+              json(res, 400, { error: 'invalid_request' }); return;
+            }
+            json(res, 200, await deviceAuthorization.start(await readOAuthForm(req)));
+          } else {
+            if (req.method !== 'GET' || [...deviceUrl.searchParams.keys()].some(k => k !== 'user_code') ||
+              deviceUrl.searchParams.getAll('user_code').length > 1) throw new DeviceAuthorizationError('invalid_request');
+            const userCode = deviceUrl.searchParams.get('user_code');
+            if (!userCode) {
+              renderDevicePage(res, '<p>连接 WorkBuddy 云端任务。只允许房态和订单读取，请核对原任务中的授权码。</p><form method="get" action="/device"><label class="field">授权码<input name="user_code" maxlength="11" autocomplete="off" required></label><button class="button button-primary">继续</button></form>');
+              return;
+            }
+            res.writeHead(303, { Location: await deviceAuthorization.authorizationUrl(userCode.trim().toUpperCase()),
+              'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' });
+            res.end();
+          }
+        } catch (error) {
+          req.resume();
+          if (deviceUrl.pathname === '/device') renderDevicePage(res,
+            '<p role="alert">授权请求已失效或不可用。请回到原来的 WorkBuddy 云端任务，重新发起连接。</p>', 400);
+          else json(res, error instanceof DeviceAuthorizationError ? 400 : 503,
+            { error: error instanceof DeviceAuthorizationError ? error.code : 'temporarily_unavailable' });
+        }
+        return;
+      }
       if (req.url === '/oauth/register' && workbuddyClients) {
         if (!(await allowRequest(req))) { json(res, 429, { error: 'rate_limited' }); return; }
         await workbuddyClients.register(req, res);
@@ -217,9 +265,12 @@ export function createRemoteRuntime(
       }
       // No token permits only public onboarding; invalid tokens never fall back to anonymous.
       const identity = match ? await (workbuddyRequest ? workbuddyTokens! : tokens).verify(match[1], requestedResource) : undefined;
+      if (identity?.clientId === DEVICE_CLIENT_ID && !deviceAuthorization) throw new OAuthTokenError('invalid_token');
       const oauthScheme = [{ type: 'oauth2', scopes: ['rooms:read'] }];
+      const workbuddyClient = workbuddyRequest && identity ? await resolveWorkbuddyClient(identity.clientId) : undefined;
+      const workbuddyCloud = workbuddyClient?.workbuddyMode === 'cloud';
       const clientScopes = workbuddyRequest
-        ? [...((identity && await workbuddyClients!.get(identity.clientId))?.allowedScopes ?? [])]
+        ? [...(workbuddyCloud ? identity!.scopes.filter(scope => workbuddyClient.allowedScopes.includes(scope)) : workbuddyClient?.allowedScopes ?? [])]
         : identity
           ? [...(config.clients.find((client) => client.clientId === identity.clientId)?.allowedScopes ?? [])]
           : discoverableScopes;
@@ -229,8 +280,8 @@ export function createRemoteRuntime(
         !!identity &&
         DEV_ACCEPTANCE_SCOPES.every((scope) => clientScopes.includes(scope));
       const availableBusinessTools = config.businessEnabled
-        ? business.list({ scopes: clientScopes, clientId: identity?.clientId }).filter((tool) =>
-            !workbuddyRequest || ['open_property_session', 'list_authorized_properties', 'switch_property', 'get_operation_status',
+        ? business.list({ scopes: clientScopes, clientId: identity?.clientId }, { workbuddyCloud }).filter((tool) =>
+            !workbuddyRequest || workbuddyCloud || ['open_property_session', 'list_authorized_properties', 'switch_property', 'get_operation_status',
               'query_room_status_new', 'query_today_room_status', 'query_room_prices', 'query_today_orders',
               'query_pre_arrival_orders', 'query_in_house_orders', 'query_pre_departure_orders',
               'query_orders_by_date_range', 'get_order_details_v2', 'query_operational_data_v2',
@@ -384,7 +435,8 @@ export function createRemoteRuntime(
               ...(await business.call(
                 identity,
                 request.params.name,
-                request.params.arguments ?? {}
+                request.params.arguments ?? {},
+                { workbuddyCloud }
               )),
             };
           } catch (error) {

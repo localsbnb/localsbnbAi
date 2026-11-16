@@ -2,7 +2,7 @@ import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypt
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import {
   AuthorizationCodeService,
-  isWorkbuddyRedirect,
+  isRegisteredWorkbuddyRedirect,
   type OneTimeCodeStore,
   type RegisteredOAuthClient,
 } from './authorizationCode.js';
@@ -18,6 +18,7 @@ import { readOAuthForm } from './httpHandler.js';
 import { brandMarkDataUri } from './brandMark.js';
 
 interface Pending {
+  deviceUserCode?: string;
   clientId: string;
   redirectUri: string;
   resource: string;
@@ -38,6 +39,12 @@ interface Pending {
   edition?: 'cn' | 'overseas';
 }
 export interface BrowserAuthorizationOptions {
+  workbuddyCloudEnabled?: boolean;
+  deviceAuthorization?: {
+    clientId: string;
+    validateBrowserRequest: (query: URLSearchParams) => Promise<string | null>;
+    decide: (state: string, grant?: import('./authorizationCode.js').ApprovedGrant) => Promise<void>;
+  };
   issuer: string;
   namespace: string;
   clients: readonly RegisteredOAuthClient[];
@@ -76,37 +83,38 @@ const styles = `
 .brand-pane:before,.brand-pane:after{content:"";position:absolute;border:1px solid #ffffff27;border-radius:50%;pointer-events:none}.brand-pane:before{width:560px;height:560px;right:-280px;top:12%}.brand-pane:after{width:760px;height:760px;right:-370px;top:4%}
 .brand-top,.brand-story,.brand-foot{position:relative;z-index:1}.brand-top{display:flex;align-items:center;gap:14px;font-size:25px;font-weight:700;letter-spacing:-.035em}.brand-top img,.mobile-brand img{width:50px;height:50px;border-radius:13px;background:#fff;object-fit:contain}.brand-story{max-width:430px}.brand-kicker{font-size:12px;font-weight:700;letter-spacing:.19em;text-transform:uppercase;color:#c9d5ff}.brand-story h2{font-size:clamp(32px,3.2vw,50px);line-height:1.2;letter-spacing:-.045em;margin:18px 0}.brand-story p{font-size:16px;line-height:1.8;color:#dce5ff}.brand-foot{font-size:12px;color:#c5d1fb}
 .main-pane{display:flex;align-items:center;justify-content:center;min-width:0;padding:52px 28px}.card{width:min(100%,480px);min-width:0}.mobile-brand{display:none;align-items:center;gap:12px;font-size:22px;font-weight:700;margin-bottom:34px}.eyebrow{color:#5268be;font-size:12px;font-weight:750;letter-spacing:.13em;text-transform:uppercase;margin:0 0 12px}.card h1{font-size:32px;line-height:1.2;letter-spacing:-.04em;margin:0 0 12px;color:#14213c}.lead{color:#61708b;font-size:15px;line-height:1.7;margin:0 0 30px}.content{min-width:0}.field{display:block;margin:20px 0 0;font-size:13px;font-weight:650;color:#34415b}.field input,.field select{display:block;width:100%;height:48px;margin-top:8px;padding:0 14px;border:1px solid #d9e0ec;border-radius:11px;background:#fff;color:#17233b;outline:none;transition:border-color .15s,box-shadow .15s}.field input:focus,.field select:focus{border-color:#4d65f6;box-shadow:0 0 0 4px #4d65f620}.field input::placeholder{color:#a3aec1}.field select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,#62708a 50%),linear-gradient(135deg,#62708a 50%,transparent 50%);background-position:calc(100% - 19px) 21px,calc(100% - 14px) 21px;background-size:5px 5px;background-repeat:no-repeat;padding-right:36px}
-.actions{display:flex;gap:12px;margin-top:26px}.button{min-height:48px;border-radius:11px;padding:11px 20px;border:1px solid transparent;font-weight:700;transition:background .15s,transform .15s}.button:active{transform:translateY(1px)}.button-primary{background:#4d65f6;color:#fff;box-shadow:0 8px 20px #4d65f62b}.button-primary:hover{background:#394fdf}.button-secondary{background:#fff;border-color:#d9e0ec;color:#34415b}.button-secondary:hover{background:#f6f8fd}.actions .button-primary{flex:1}.actions .button-secondary{min-width:100px}
+.actions{display:flex;gap:12px;margin-top:26px}.button{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;min-height:48px;border-radius:11px;padding:11px 20px;border:1px solid transparent;font-weight:700;transition:background .15s,transform .15s}.button:active{transform:translateY(1px)}.button-primary{background:#4d65f6;color:#fff;box-shadow:0 8px 20px #4d65f62b}.button-primary:hover{background:#394fdf}.button-secondary{background:#fff;border-color:#d9e0ec;color:#34415b}.button-secondary:hover{background:#f6f8fd}.actions .button-primary{flex:1}.actions .button-secondary{min-width:100px}
 .meta{border:1px solid #e2e7f1;border-radius:14px;background:#fbfcff;padding:16px 18px;margin:0 0 22px;min-width:0}.meta-row{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;font-size:13px;line-height:1.6;min-width:0}.meta-row+.meta-row{margin-top:9px}.meta-key{color:#6b7891;flex:none}.meta-value{color:#263550;font-weight:600;text-align:right;overflow-wrap:anywhere;min-width:0}.scope-list{display:flex;flex-wrap:wrap;gap:7px;justify-content:flex-end}.scope{display:inline-block;border-radius:7px;background:#edf1ff;color:#3e56cf;padding:2px 8px;font-size:12px;font-weight:650}
 .notice{border:1px solid #f1d9bc;background:#fff8ec;color:#765124;padding:13px 15px;border-radius:11px;font-size:13px;line-height:1.6;margin:0 0 22px}.note{color:#7a879c;font-size:12px;line-height:1.7;margin:18px 0 0}.divider{border:0;border-top:1px solid #e9edf4;margin:30px 0 20px}.register{border-top:1px solid #e9edf4;margin-top:30px;padding-top:20px}.register summary{font-size:14px;font-weight:650;color:#465fe0;cursor:pointer}.register p{font-size:13px;line-height:1.6;color:#66758f}.register small{font-size:12px;color:#7a879c}.register .button{width:100%;margin-top:20px}
 .edition-choice{border:0;margin:0;padding:0;min-width:0}.edition-choice legend{font-size:13px;font-weight:650;color:#34415b;margin-bottom:9px}.edition-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.edition-option{position:relative;display:block;min-width:0;cursor:pointer}.edition-option input{position:absolute;opacity:0;width:1px;height:1px}.edition-option span{display:block;border:1px solid #dce2ee;border-radius:11px;padding:13px 10px;color:#495670;font-size:14px;font-weight:650;text-align:center;overflow-wrap:anywhere}.edition-option input:checked+span{border-color:#4d65f6;background:#eef1ff;color:#324bd0}.edition-option input:focus-visible+span{outline:3px solid #a3afff;outline-offset:2px}
 .error-card{border:1px solid #e7ebf3;background:#fff;border-radius:15px;padding:20px}.error-card .notice{margin-bottom:0}.error-hint{font-size:13px;line-height:1.7;color:#6b7891;margin:17px 0 0}
 @media(max-width:900px){.shell{grid-template-columns:minmax(0,1fr)}.brand-pane{display:none}.main-pane{padding:42px 24px}.mobile-brand{display:flex}}@media(max-width:480px){.main-pane{align-items:flex-start;padding:34px 22px 50px}.card h1{font-size:28px}.lead{margin-bottom:25px}.mobile-brand{margin-bottom:40px}.actions{flex-wrap:wrap}.actions .button{width:100%}.meta-row{gap:10px}.meta{padding:14px}.scope-list{justify-content:flex-end}}`;
-const editionScript = `document.querySelectorAll('input[name="edition"]').forEach(input=>input.addEventListener('change',()=>{const cn=document.querySelector('input[name="edition"]:checked')?.value==='cn';document.querySelectorAll('[data-cn][data-overseas]').forEach(el=>{el.textContent=el.getAttribute(cn?'data-cn':'data-overseas')});document.documentElement.lang=cn?'zh-CN':'en';document.title=(cn?'登录并连接门店 · 路客云':'Sign in to connect · LocalsBnb')}));`;
+const editionScript = `document.querySelectorAll('input[name="edition"]').forEach(input=>input.addEventListener('change',()=>{const cn=document.querySelector('input[name="edition"]:checked')?.value==='cn';document.querySelectorAll('[data-cn][data-overseas]').forEach(el=>{el.textContent=el.getAttribute(cn?'data-cn':'data-overseas')});document.documentElement.lang=cn?'zh-CN':'en';document.title=(cn?'登录并连接企业 · 路客云':'Sign in to connect · LocalsBnb')}));`;
 const dualText = (cn: string, overseas: string, selected: boolean): string =>
   `<span data-cn="${escape(cn)}" data-overseas="${escape(overseas)}">${escape(selected ? cn : overseas)}</span>`;
-function page(res: ServerResponse, body: string, status = 200, redirectOrigin?: string, chinese = false, stage: 'login' | 'consent' | 'error' = 'login', workbuddy = false): void {
+function page(res: ServerResponse, body: string, status = 200, redirectOrigin?: string, chinese = false, stage: 'login' | 'consent' | 'error' | 'complete' | 'cancelled' = 'login', workbuddy = false, completionScript = ''): void {
   const brand = chinese ? '路客云' : 'LocalsBnb';
-  const title = stage === 'consent' ? (chinese ? '授权连接门店' : 'Connect a property') : stage === 'error' ? (chinese ? '连接未完成' : 'Connection not completed') : (chinese ? '登录并连接门店' : 'Sign in to connect');
+  const title = stage === 'complete' ? (chinese ? '授权已确认' : 'Authorization confirmed') : stage === 'cancelled' ? (chinese ? '已取消授权' : 'Authorization cancelled') : stage === 'consent' ? (chinese ? '授权连接企业' : 'Connect a property') : stage === 'error' ? (chinese ? '连接未完成' : 'Connection not completed') : (chinese ? '登录并连接企业' : 'Sign in to connect');
   const destination = workbuddy ? 'WorkBuddy' : 'ChatGPT';
   const dynamic = workbuddy && stage === 'login';
   const label = (cn: string, overseas: string) => dynamic ? dualText(cn, overseas, chinese) : escape(chinese ? cn : overseas);
+  const script = completionScript || (dynamic ? editionScript : '');
   res.writeHead(status, {
     'Content-Type': 'text/html; charset=utf-8',
     'Cache-Control': 'no-store',
     Pragma: 'no-cache',
     // Chromium/WebKit also enforce form-action on the consent POST's 303 redirect.
     // Allow only the registered OAuth callback origin, never arbitrary destinations.
-    'Content-Security-Policy': `default-src 'none'; img-src data:; style-src 'sha256-${createHash('sha256').update(styles).digest('base64')}'; ${dynamic ? `script-src 'sha256-${createHash('sha256').update(editionScript).digest('base64')}'; ` : ''}form-action 'self'${redirectOrigin ? ` ${redirectOrigin}` : ''}; frame-ancestors 'none'; base-uri 'none'`,
+    'Content-Security-Policy': `default-src 'none'; img-src data:; style-src 'sha256-${createHash('sha256').update(styles).digest('base64')}'; ${script ? `script-src 'sha256-${createHash('sha256').update(script).digest('base64')}'; ` : ''}form-action 'self'${redirectOrigin ? ` ${redirectOrigin}` : ''}; frame-ancestors 'none'; base-uri 'none'`,
     'X-Frame-Options': 'DENY',
     'X-Content-Type-Options': 'nosniff',
     // Browser form POST needs a non-null Origin; send only the origin, never OAuth URL parameters.
-    'Referrer-Policy': 'origin',
+    'Referrer-Policy': completionScript ? 'no-referrer' : 'origin',
   });
   res.end(
     `<!doctype html><html lang="${chinese ? 'zh-CN' : 'en'}"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title} · ${brand}</title>` +
       `<style>${styles}</style>` +
-      `<body><div class="shell"><aside class="brand-pane"><div class="brand-top"><img src="${brandMarkDataUri}" alt="">${label('路客云', 'LocalsBnb')}</div><div class="brand-story"><div class="brand-kicker">${label('值得信赖的门店连接', 'A secure connection')}</div><h2>${label('让门店运营，连接更多可能。', 'Your property, connected.')}</h2><p>${label('选择门店并确认授权，让服务在你许可的范围内工作。', 'Choose a property and review permissions before you connect.')}</p></div><div class="brand-foot">© ${new Date().getFullYear()} ${label('路客云', 'LocalsBnb')}</div></aside><main class="main-pane"><div class="card"><div class="mobile-brand"><img src="${brandMarkDataUri}" alt="">${label('路客云', 'LocalsBnb')}</div><p class="eyebrow">${label('安全授权', 'SECURE AUTHORIZATION')}</p><h1>${dynamic ? label('登录并连接门店', 'Sign in to connect') : title}</h1><p class="lead">${stage === 'error' ? label('请查看下方提示，然后重新发起连接。', 'Review the message below, then start a new connection.') : label(`完成后将返回 ${destination}。`, `After connecting, you will return to ${destination}.`)}</p><div class="content">${body}</div></div></main></div>${dynamic ? `<script>${editionScript}</script>` : ''}</body></html>`
+      `<body><div class="shell"><aside class="brand-pane"><div class="brand-top"><img src="${brandMarkDataUri}" alt="">${label('路客云', 'LocalsBnb')}</div><div class="brand-story"><div class="brand-kicker">${label('授权路客云账号，让AI管理你的酒店', 'A secure connection')}</div><h2>${label('通过AI运营酒店，创造更多可能。', 'Your property, connected.')}</h2><p>${label('选择企业并确认授权，让服务在你许可的范围内工作。', 'Choose a property and review permissions before you connect.')}</p></div><div class="brand-foot">© ${new Date().getFullYear()} ${label('路客云', 'LocalsBnb')}</div></aside><main class="main-pane"><div class="card"><div class="mobile-brand"><img src="${brandMarkDataUri}" alt="">${label('路客云', 'LocalsBnb')}</div><p class="eyebrow">${label('安全授权', 'SECURE AUTHORIZATION')}</p><h1>${dynamic ? label('登录并连接企业', 'Sign in to connect') : title}</h1><p class="lead">${stage === 'complete' ? label('请返回 WorkBuddy 查看连接状态。', 'Return to WorkBuddy to check your connection.') : stage === 'cancelled' ? label('你可以返回 WorkBuddy，稍后重新连接。', 'Return to WorkBuddy. You can connect again later.') : stage === 'error' ? label('请查看下方提示，然后重新发起连接。', 'Review the message below, then start a new connection.') : label(`完成后将返回 ${destination}。`, `After connecting, you will return to ${destination}.`)}</p><div class="content">${body}</div></div></main></div>${script ? `<script>${script}</script>` : ''}</body></html>`
   );
 }
 const messages: Record<string, string> = {
@@ -121,6 +129,8 @@ const messages: Record<string, string> = {
   property_forbidden: 'This property is no longer available to this account. Start again.',
   credential_setup_required:
     'This property needs an existing LocalsBnb App Secret. Contact your administrator, then start again.',
+  credential_enable_failed:
+    'Connection setup could not be completed. Please try Allow access again shortly.',
 };
 const chineseMessages: Record<string, string> = {
   [messages.signup_failed]: '注册未能完成。如果账号已创建，请直接登录；否则请重新发起连接。',
@@ -128,9 +138,10 @@ const chineseMessages: Record<string, string> = {
   [messages.login_failed]: '登录失败，请检查账号和密码后重试。',
   [messages.mfa_required]: '邮箱验证码已发送，请输入验证码后继续。',
   [messages.mfa_rate_limit]: '请等待 60 秒后再请求新的验证码。',
-  [messages.no_properties]: '该账号暂无可连接的门店。',
-  [messages.property_forbidden]: '该门店已不属于当前账号，请重新发起连接。',
-  [messages.credential_setup_required]: '该门店尚未配置路客云 App Secret，请联系管理员后重新发起连接。',
+  [messages.no_properties]: '该账号暂无可连接的企业。',
+  [messages.property_forbidden]: '该企业已不属于当前账号，请重新发起连接。',
+  [messages.credential_setup_required]: '该企业尚未配置路客云 App Secret，请联系管理员后重新发起连接。',
+  [messages.credential_enable_failed]: '企业连接能力暂时未能开通，请稍后点击“允许访问”重试。',
 };
 class BrowserFlowError extends Error {
   constructor(readonly reason: keyof typeof flowMessages) {
@@ -189,11 +200,39 @@ export function createBrowserAuthorization(
       'Set-Cookie',
       `${cookieName(id)}=${value}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${age}`
     );
+  function returnToClient(res: ServerResponse, p: Pending, redirect: string): void {
+    // A private-scheme navigation can open the app while leaving the browser on this page.
+    // Render a durable result first; never treat issuing a code as proof of a token exchange.
+    if (p.deviceUserCode) {
+      const chinese = p.edition === 'cn';
+      const cancelled = new URL(redirect).searchParams.has('error');
+      page(res, `<p role="status">${chinese
+        ? (cancelled ? '未授予访问权限，请返回原来的 WorkBuddy 云端任务。' : '只读授权已确认，请返回原来的 WorkBuddy 云端任务继续查询。你可以关闭此页面。')
+        : (cancelled ? 'No access was granted. Return to your original WorkBuddy cloud task.' : 'Read-only authorization confirmed. Return to your original WorkBuddy cloud task to continue. You can close this page.')}</p>`,
+        200, undefined, chinese, cancelled ? 'cancelled' : 'complete', true);
+      return;
+    }
+    if (isWorkbuddy(p) && new URL(redirect).protocol === 'workbuddy:') {
+      const chinese = p.edition === 'cn';
+      const cancelled = new URL(redirect).searchParams.has('error');
+      const text = (cn: string, en: string) => escape(chinese ? cn : en);
+      const script = `const link=document.getElementById('return-to-client');setTimeout(()=>{window.location.href=link.href},400);setTimeout(()=>{link.removeAttribute('href');link.setAttribute('aria-disabled','true');document.getElementById('return-note').textContent=document.documentElement.lang==='zh-CN'?'返回链接已过期。如尚未连接，请在 WorkBuddy 中重新发起连接。':'This return link has expired. If you are not connected, start a new connection in WorkBuddy.'},120000);`;
+      page(res,
+        `<p role="status">${text(cancelled ? '本次未授予企业访问权限。' : '企业授权已确认，正在尝试打开 WorkBuddy。', cancelled ? 'No property access was granted.' : 'Property authorization is confirmed. Opening WorkBuddy…')}</p>` +
+        `<div class="actions"><a id="return-to-client" class="button button-primary" href="${escape(redirect)}">${text('返回 WorkBuddy', 'Return to WorkBuddy')}</a></div>` +
+        `<p id="return-note" class="note">${text('如未自动打开，请点击上方按钮并允许浏览器打开应用。连接结果请以 WorkBuddy 中的状态为准；返回后可关闭此页面。', 'If the app does not open automatically, use the button above and allow your browser to open it. Check the connection status in WorkBuddy. You can close this page after returning.')}</p>`,
+        200, 'workbuddy:', chinese, cancelled ? 'cancelled' : 'complete', true, script);
+      return;
+    }
+    res.writeHead(303, { Location: redirect, 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' });
+    res.end();
+  }
   function form(res: ServerResponse, id: string, csrf: string, p: Pending, message = ''): void {
     const hidden = `<input type="hidden" name="transaction" value="${escape(id)}"><input type="hidden" name="csrf" value="${escape(csrf)}">`;
     const chinese = isWorkbuddy(p) && p.edition === 'cn';
     const label = (cn: string, overseas: string) => isWorkbuddy(p) && !p.session ? dualText(cn, overseas, chinese) : escape(chinese ? cn : overseas);
-    const intro = `<div class="meta"><div class="meta-row"><span class="meta-key">${label('连接应用', 'Application')}</span><span class="meta-value">${escape(p.clientId)}</span></div><div class="meta-row"><span class="meta-key">${label('申请权限', 'Permissions')}</span><span class="meta-value scope-list">${p.scopes.map((scope) => `<span class="scope">${escape(scope)}</span>`).join('')}</span></div></div>`;
+    const intro = `<div class="meta"><div class="meta-row"><span class="meta-key">${label('连接应用', 'Application')}</span><span class="meta-value">${escape(isWorkbuddy(p) ? 'WorkBuddy' : p.clientId)}</span></div></div>`;
+    const deviceNotice = p.deviceUserCode ? `<div class="notice">${label('正在授权 WorkBuddy 云端任务，仅可读取房态和订单。请核对原任务中的授权码：', 'Authorize a WorkBuddy cloud task to read rooms and orders only. Check this code against your original task: ')}<strong>${escape(p.deviceUserCode)}</strong></div>` : '';
     const notice = message ? `<div role="alert" class="notice">${escape(chinese ? chineseMessages[message] ?? message : message)}</div>` : '';
     const callbackUrl = new URL(p.redirectUri);
     const callback = callbackUrl.protocol === 'workbuddy:' ? 'workbuddy:' : callbackUrl.origin;
@@ -209,8 +248,9 @@ export function createBrowserAuthorization(
       page(
         res,
         intro +
+          deviceNotice +
           notice +
-          `<form method="post" action="${basePath}/login">${hidden}${isWorkbuddy(p) ? `<fieldset class="edition-choice"><legend>${label('选择地区', 'Choose a region')}</legend><div class="edition-options"><label class="edition-option"><input type="radio" name="edition" value="cn"${p.edition === 'cn' ? ' checked' : ''}><span>中国国内 · 路客云</span></label><label class="edition-option"><input type="radio" name="edition" value="overseas"${p.edition === 'overseas' ? ' checked' : ''}><span>Overseas · LocalsBnb</span></label></div></fieldset>` : ''}<label class="field">${label('邮箱或手机号', isWorkbuddy(p) ? 'Email or phone' : 'Email')}<input name="email" type="${isWorkbuddy(p) ? 'text' : 'email'}" autocomplete="username" required></label><label class="field">${label('密码', 'Password')}<input name="password" type="password" autocomplete="current-password" required></label>${p.mfaRequired ? `<label class="field">${label('邮箱验证码', 'Email verification code')}<input name="authCode" autocomplete="one-time-code" maxlength="32"></label><p class="note">${label('如需新验证码，请等待 60 秒后不填写验证码再次登录。', 'For a new code, wait 60 seconds and sign in again without a code.')}</p>` : ''}<div class="actions"><button class="button button-primary" type="submit">${label('登录并继续', 'Sign in and continue')}</button></div></form>` +
+          `<form method="post" action="${basePath}/login">${hidden}${isWorkbuddy(p) ? `<fieldset class="edition-choice"><legend>${label('版本选择', 'Choose an edition')}</legend><div class="edition-options"><label class="edition-option"><input type="radio" name="edition" value="cn"${p.edition === 'cn' ? ' checked' : ''}>${label('国内版', 'China edition')}</label><label class="edition-option"><input type="radio" name="edition" value="overseas"${p.edition === 'overseas' ? ' checked' : ''}>${label('海外版', 'Overseas edition')}</label></div></fieldset>` : ''}<label class="field">${label('手机号', 'Email')}<input name="email" type="${isWorkbuddy(p) ? 'text' : 'email'}" autocomplete="username" required></label><label class="field">${label('密码', 'Password')}<input name="password" type="password" autocomplete="current-password" required></label>${p.mfaRequired ? `<label class="field">${label('邮箱验证码', 'Email verification code')}<input name="authCode" autocomplete="one-time-code" maxlength="32"></label><p class="note">${label('如需新验证码，请等待 60 秒后不填写验证码再次登录。', 'For a new code, wait 60 seconds and sign in again without a code.')}</p>` : ''}<div class="actions"><button class="button button-primary" type="submit">${label('登录并继续', 'Sign in and continue')}</button></div></form>` +
           registration +
           `<p class="note">${label('密码与验证码不会进入对话，也不会重置现有凭证。', 'Your password and verification code stay out of the conversation. Existing credentials are never reset.')}</p>`,
         200,
@@ -223,8 +263,9 @@ export function createBrowserAuthorization(
       page(
         res,
         intro +
+          deviceNotice +
           notice +
-          `<div class="meta"><div class="meta-row"><span class="meta-key">${chinese ? '当前账号' : 'Account'}</span><span class="meta-value">${escape(p.session.subjectId)}</span></div></div><form method="post" action="${basePath}/consent">${hidden}<label class="field">${chinese ? '授权门店' : 'Property'}<select name="campId">${p.session.camps.map((c) => `<option value="${escape(c.campId)}">${escape(c.name)}</option>`).join('')}</select></label><p class="note">${chinese ? '只有选中的门店会被连接。' : 'Only the selected property will be connected.'}</p><div class="actions"><button class="button button-primary" name="decision" value="approve">${chinese ? '允许访问' : 'Allow access'}</button><button class="button button-secondary" name="decision" value="deny">${chinese ? '取消' : 'Cancel'}</button></div></form>`,
+          `<div class="meta"><div class="meta-row"><span class="meta-key">${chinese ? '当前账号' : 'Account'}</span><span class="meta-value">${escape(p.session.subjectId)}</span></div></div><form method="post" action="${basePath}/consent">${hidden}<label class="field">${chinese ? '授权企业' : 'Property'}<select name="campId">${p.session.camps.map((c) => `<option value="${escape(c.campId)}">${escape(c.name)}</option>`).join('')}</select></label><p class="note">${chinese ? '只有选中的企业会被连接。' : 'Only the selected property will be connected.'}</p><div class="actions"><button class="button button-primary" name="decision" value="approve">${chinese ? '允许访问' : 'Allow access'}</button><button class="button button-secondary" name="decision" value="deny">${chinese ? '取消' : 'Cancel'}</button></div></form>`,
         200,
         callback,
         chinese,
@@ -246,14 +287,18 @@ export function createBrowserAuthorization(
         const client = await clientFor(q.get('client_id') ?? '', q.get('resource') ?? '');
         const redirectUri = q.get('redirect_uri') ?? '';
         if (!client || !client.redirectUris.includes(redirectUri)) throw new Error();
+        if (client.workbuddyMode === 'cloud' && !options.workbuddyCloudEnabled) throw new Error();
         const redirect = new URL(redirectUri);
+        const deviceClient = client.clientId === options.deviceAuthorization?.clientId;
+        const deviceUserCode = deviceClient ? await options.deviceAuthorization!.validateBrowserRequest(q) : null;
+        if (deviceClient && !deviceUserCode) throw new Error();
         // WorkBuddy omits scope even after dynamic registration. In OAuth this
         // means the authorization server chooses the default; show the full
         // registered permission set on the consent page before issuing a grant.
         const scopes = (q.get('scope') ??
           (q.get('resource') === options.workbuddyResource ? client.allowedScopes.join(' ') : '')).split(' ');
         if (
-          !((q.get('resource') === options.workbuddyResource || options.workbuddy) ? isWorkbuddyRedirect(redirect) : redirect.protocol === 'https:') ||
+          !((q.get('resource') === options.workbuddyResource || options.workbuddy) ? (deviceUserCode ? redirectUri === origin.origin + '/device/complete' : isRegisteredWorkbuddyRedirect(client, redirect)) : redirect.protocol === 'https:') ||
           redirect.username ||
           redirect.password ||
           redirect.hash ||
@@ -271,6 +316,7 @@ export function createBrowserAuthorization(
         const csrf = randomBytes(32).toString('base64url');
         const browser = randomBytes(32).toString('base64url');
         const p: Pending = {
+          ...(deviceUserCode ? { deviceUserCode } : {}),
           clientId: client.clientId,
           redirectUri,
           resource: q.get('resource')!,
@@ -346,12 +392,7 @@ export function createBrowserAuthorization(
         if (!p.completedAt || p.completedAt + 120000 <= now())
           throw new BrowserFlowError('transaction');
         diagnostic('replayed', id);
-        res.writeHead(303, {
-          Location: p.completedRedirect,
-          'Cache-Control': 'no-store',
-          'Referrer-Policy': 'no-referrer',
-        });
-        res.end();
+        returnToClient(res, p, p.completedRedirect);
         diagnostic('redirect_replayed', id);
         return;
       }
@@ -493,6 +534,7 @@ export function createBrowserAuthorization(
       let grantId: string | undefined;
       try {
         if (f.get('decision') === 'deny') {
+          if (p.deviceUserCode) await options.deviceAuthorization!.decide(p.state!);
           redirect.searchParams.set('error', 'access_denied');
           if (p.state !== undefined) redirect.searchParams.set('state', p.state);
         } else {
@@ -507,19 +549,23 @@ export function createBrowserAuthorization(
             campId,
             resource: p.resource,
             scopes: p.scopes,
-            expiresAt: new Date(now() + (isWorkbuddy(p) ? 30 : 7) * 86400000),
+            expiresAt: new Date(now() + (p.deviceUserCode ? 1 : isWorkbuddy(p) ? 30 : 7) * 86400000),
           };
           grantId = grant.grantId;
           await options.grants.create(grant, verified.credential);
           const client = await clientFor(p.clientId, p.resource);
           if (!client) throw new Error();
-          const issued = await (isWorkbuddy(p) ? options.workbuddyCodes ?? options.codes : options.codes).issue(client, grant, {
-            redirectUri: p.redirectUri,
-            challenge: p.challenge,
-            challengeMethod: 'S256',
-            state: p.state,
-          });
-          redirect.href = issued.redirectUrl;
+          if (p.deviceUserCode) {
+            await options.deviceAuthorization!.decide(p.state!, grant);
+          } else {
+            const issued = await (isWorkbuddy(p) ? options.workbuddyCodes ?? options.codes : options.codes).issue(client, grant, {
+              redirectUri: p.redirectUri,
+              challenge: p.challenge,
+              challengeMethod: 'S256',
+              state: p.state,
+            });
+            redirect.href = issued.redirectUrl;
+          }
         }
         // A second form POST from the same browser receives the same short-lived code redirect.
         // The code itself remains one-time at /token; no second grant or code is created.
@@ -544,12 +590,7 @@ export function createBrowserAuthorization(
         throw error;
       }
       cookie(res, id, cookies[0].slice(cookieName(id).length + 1), Math.min(120, Math.ceil((p.expiresAt - now()) / 1000)));
-      res.writeHead(303, {
-        Location: redirect.toString(),
-        'Cache-Control': 'no-store',
-        'Referrer-Policy': 'no-referrer',
-      });
-      res.end();
+      returnToClient(res, p, redirect.toString());
       diagnostic('redirect_sent', id);
     } catch (error) {
       req.resume();
@@ -564,4 +605,9 @@ export function createBrowserAuthorization(
       );
     }
   };
+}
+
+/** Shared branding for the dev device-code entry; body is server-generated, never raw request text. */
+export function renderDevicePage(res: ServerResponse, body: string, status = 200): void {
+  page(res, body, status, undefined, true, status === 200 ? 'consent' : 'error', true);
 }

@@ -28,7 +28,8 @@ export class ChannelFlows {
     ctx: ToolContext,
     grantId: string,
     clientId: string,
-    sourceGrantId = grantId
+    sourceGrantId = grantId,
+    resource?: string
   ): Promise<ToolResult> {
     if (!Object.hasOwn(CHANNEL_TARGETS, channel)) throw new Error('Unknown channel');
     // 快照在开链前完成；同一会话只维护一条活跃流程。
@@ -50,7 +51,8 @@ export class ChannelFlows {
       clientId,
       ctx.campId!,
       work.data.channel,
-      sourceGrantId
+      sourceGrantId,
+      resource
     );
     return result({
       status: 'awaiting_user',

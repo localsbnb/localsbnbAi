@@ -250,10 +250,14 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     name: 'query_orders_by_date_range',
     description:
-      '订单查询（日期范围事件）。支持按 startDate/endDate 或 timeRange(this_week/last_week) 查询，不与今日订单/预抵/在住/预离混用。支持关键词：订单查询、查询订单、某时间段订单。',
+      '订单查询（日期范围事件）。默认仅查有效（非取消）订单并明确状态；用户明确查询取消订单时 statusFilter=cancelled，明确全部订单时为 all。支持按 startDate/endDate 或 timeRange(this_week/last_week) 查询，不与今日订单/预抵/在住/预离混用。支持关键词：订单查询、查询订单、某时间段订单。',
     inputSchema: {
       type: 'object',
       properties: {
+        statusFilter: {
+          type: 'string', enum: ['active', 'cancelled', 'all'], default: 'active',
+          description: '默认 active=非取消订单；仅明确查询取消订单时选 cancelled，明确全部订单时选 all。',
+        },
         startDate: {
           type: 'string',
           description: '查询开始日期 YYYY-MM-DD；与 endDate 配对',

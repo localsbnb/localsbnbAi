@@ -1,4 +1,5 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
+import { isWorkbuddyCloudRedirect } from './workbuddyRedirects.js';
 
 export interface OneTimeCodeStore {
   putIfAbsent(key: string, value: string, ttlSeconds: number): Promise<boolean>;
@@ -11,6 +12,8 @@ export interface RegisteredOAuthClient {
   clientId: string;
   redirectUris: readonly string[];
   allowedScopes: readonly string[];
+  /** Persisted by trusted registration only; missing means a legacy desktop client. */
+  workbuddyMode?: 'desktop' | 'cloud';
 }
 
 /** 仅由可信登录/同意服务产生；不是浏览器或模型自报的身份。 */
@@ -52,6 +55,10 @@ export function isWorkbuddyRedirect(url: URL): boolean {
   ) && !url.username && !url.password && !url.hash && !url.search;
 }
 
+export function isRegisteredWorkbuddyRedirect(client: RegisteredOAuthClient, url: URL): boolean {
+  return client.workbuddyMode === 'cloud' ? isWorkbuddyCloudRedirect(url) : isWorkbuddyRedirect(url);
+}
+
 export function pkceS256(verifier: string): string {
   if (!/^[A-Za-z0-9._~-]{43,128}$/.test(verifier)) throw new OAuthCodeError('invalid_grant');
   return createHash('sha256').update(verifier, 'ascii').digest('base64url');
@@ -88,7 +95,7 @@ export class AuthorizationCodeService {
       state?: string;
     }
   ): Promise<{ redirectUrl: string; expiresIn: number }> {
-    // 初期只支持预登记的 HTTPS Web 回调；不支持通配符、动态任意跳转或 native loopback。
+    // All modes require an exact registered URI in addition to their distinct URL policy.
     let redirect: URL;
     try {
       redirect = new URL(request.redirectUri);
@@ -101,7 +108,7 @@ export class AuthorizationCodeService {
       client.clientId !== grant.clientId ||
       grant.resource !== this.resource ||
       !client.redirectUris.includes(request.redirectUri) ||
-      !(this.workbuddy ? isWorkbuddyRedirect(redirect) : redirect.protocol === 'https:') ||
+      !(this.workbuddy ? isRegisteredWorkbuddyRedirect(client, redirect) : redirect.protocol === 'https:') ||
       redirect.username ||
       redirect.password ||
       redirect.hash ||

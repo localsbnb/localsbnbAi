@@ -1,13 +1,13 @@
 {
   "name": "localsbnb-mcp-server",
-  "version": "1.0.17",
+  "version": "1.0.18",
   "description": "LocalsBnb MCP Server",
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
     "clean": "node scripts/clean-dist.cjs",
-    "build": "tsc && cp dist/index.js dist/start.mjs && cp scripts/run-mcp.cjs dist/run.cjs && cp scripts/run-mcp.sh dist/run.sh && cp package.json dist/package.json && chmod +x dist/run.cjs dist/run.sh dist/start.mjs",
-    "build:prod": "tsc -p tsconfig.prod.json && cp dist/index.js dist/start.mjs && cp scripts/run-mcp.cjs dist/run.cjs && cp scripts/run-mcp.sh dist/run.sh && cp package.json dist/package.json && node scripts/obfuscate-dist.cjs && chmod +x dist/run.cjs dist/run.sh dist/start.mjs",
+    "build": "tsc && cp dist/index.js dist/start.mjs && cp scripts/run-mcp.cjs dist/run.cjs && cp scripts/run-mcp.sh dist/run.sh && cp package.json dist/package.json && chmod +x dist/run.cjs dist/run.sh",
+    "build:prod": "tsc -p tsconfig.prod.json && cp dist/index.js dist/start.mjs && cp scripts/run-mcp.cjs dist/run.cjs && cp scripts/run-mcp.sh dist/run.sh && cp package.json dist/package.json && node scripts/obfuscate-dist.cjs && chmod +x dist/run.cjs dist/run.sh",
     "prebuild": "npm run clean",
     "prepublishOnly": "npm run clean && npm run build:prod",
     "dev": "tsx watch src/index.ts",

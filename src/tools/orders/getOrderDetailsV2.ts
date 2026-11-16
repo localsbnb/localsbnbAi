@@ -6,6 +6,8 @@ import {
   MCPError,
   ErrorCode,
 } from '../../utils/errorHandler.js';
+import { orderStateLabel } from './orderStatus.js';
+import { detailStateLabel } from '../../region/i18n.js';
 import { isOverseas } from '../../region/index.js';
 import { getOrderDetailsOverseas } from '../overseas/orders.js';
 import { desensitizeOrderDetail, stripOrderDetailDiscountFields } from '../../utils/desensitize.js';
@@ -210,6 +212,13 @@ export const getOrderDetailsV2Handler: ToolHandler = async (args, context) => {
     const safeData = stripOrderDetailDiscountFields(
       desensitizeOrderDetail(data as unknown as Record<string, unknown>)
     );
+    safeData.orderStateLabel = orderStateLabel(safeData.orderState);
+    if (Array.isArray(safeData.orderDetails)) {
+      safeData.orderDetails = safeData.orderDetails.map((detail: Record<string, unknown>) => ({
+        ...detail, orderStateLabel: orderStateLabel(detail.orderState ?? safeData.orderState),
+        orderDetailStateLabel: detail.orderDetailState == null ? '状态未知' : detailStateLabel('zh-CN', detail.orderDetailState),
+      }));
+    }
     return createSuccessResult(safeData);
   } catch (error) {
     return handleToolError(error, context);

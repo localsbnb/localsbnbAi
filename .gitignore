@@ -94,3 +94,8 @@ docs/overseas/test-checklist.md
 /docs/overseas/*acceptance*.md
 .env.*
 !.env.example
+
+/node_modules
+!workbuddy/official/skills/
+!workbuddy/official/skills/localsbnb/
+!workbuddy/official/skills/localsbnb/SKILL.md

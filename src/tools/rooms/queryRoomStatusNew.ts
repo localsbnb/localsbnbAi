@@ -93,6 +93,7 @@ export const queryRoomStatusNewHandler: ToolHandler = async (args, context) => {
         campId: String(campId),
         date,
         days,
+        isAvailability: 1,
         roomCategoryIds: validatedParams.roomCategoryIds || null,
         roomCategoryGroupIds: validatedParams.roomCategoryGroupIds || null,
         channelIds: validatedParams.channelIds || null,
