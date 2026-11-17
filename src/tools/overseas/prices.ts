@@ -11,7 +11,6 @@ import {
   resolveNaturalWeek,
   t,
   toOverseasDays,
-  toZoneStartMs,
   weekdayShort,
 } from '../../region/index.js';
 import { createSuccessResult } from '../../utils/errorHandler.js';
@@ -45,7 +44,8 @@ export async function queryRoomPricesOverseas(
   });
   const payload = {
     campId,
-    startDate: toZoneStartMs(resolved.date, profile.ianaTimeZone),
+    // 与海外 PC 一致，发送业务日期，避免企业时区与服务端日期校验时区冲突。
+    startDate: resolved.date,
     days: toOverseasDays(resolved.days),
   };
   const data = await hudsonPost<ChannelPriceView>(

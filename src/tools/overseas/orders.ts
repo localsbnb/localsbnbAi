@@ -16,7 +16,6 @@ import {
   profileOf,
   requireCampId,
   t,
-  toZoneStartMs,
 } from '../../region/index.js';
 import { orderStatusFilterSchema, orderStatusFilters, orderStateLabel, type OrderStatusFilter } from '../orders/orderStatus.js';
 import { MCPError, ErrorCode, isOrderNotFoundError } from '../../utils/errorHandler.js';
@@ -61,9 +60,8 @@ export async function fetchOverseasOrderPage(
   }
 ): Promise<{ list: OverseasOrderRow[]; total: number }> {
   const campId = requireCampId(context);
-  const tz = profileOf(context).ianaTimeZone;
-  // Hudson BnbOrderDetailsPageGetRequest：startDate/endDate 均需当日 0 点（@BeginOfDay）。
-  // 传日末时间戳会触发 date 联合校验（date:trigger union validation / 触发联合验证）。
+  // 与海外 PC 一致传业务日期字符串，由 Hudson 解析日期；不能将企业时区零点
+  // 转成 epoch，否则在服务端时区可能不是零点，触发 date 联合校验。
   const filters = orderStatusFilters(params.statusFilter);
   const data = await hudsonPost<unknown>(
     context,
@@ -72,8 +70,8 @@ export async function fetchOverseasOrderPage(
       campId,
       searchKey: params.searchKey || undefined,
       dateTimeSearchType: params.dateTimeSearchType,
-      startDate: toZoneStartMs(params.startDate, tz),
-      endDate: toZoneStartMs(params.endDate, tz),
+      startDate: params.startDate,
+      endDate: params.endDate,
       ...filters,
       orderDetailStates: params.orderDetailStates ?? filters.orderDetailStates,
       pageNum: params.pageNum,

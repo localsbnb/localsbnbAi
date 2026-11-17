@@ -83,6 +83,7 @@ docs/overseas-apifox/
 docs/overseas/test-checklist.md
 
 # Private deployment and development material must stay out of this repository.
+/node_modules
 /Jenkinsfile
 /scripts/release/
 /scripts/dev/
@@ -94,8 +95,7 @@ docs/overseas/test-checklist.md
 /docs/overseas/*acceptance*.md
 .env.*
 !.env.example
-
-/node_modules
+# Only the official connector runtime Skill is public.
 !workbuddy/official/skills/
 !workbuddy/official/skills/localsbnb/
 !workbuddy/official/skills/localsbnb/SKILL.md

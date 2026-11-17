@@ -6,7 +6,6 @@ import {
   formatFen,
   getTodayYmd,
   profileOf,
-  toZoneStartMs,
   toOverseasDays,
 } from '../../region/index.js';
 import {
@@ -43,7 +42,7 @@ export async function updateChannelPrices(
   if (!dates.length) invalid('No selected weekdays in the requested range');
   const profile = profileOf(context);
   const data = await post(context, '/bnbRatePrice/channelPrice/get', {
-    startDate: toZoneStartMs(range.from, profile.ianaTimeZone),
+    startDate: range.from,
     days: toOverseasDays(range.days),
   });
   let selected: { category: Row; rate: Row } | undefined;
@@ -103,7 +102,7 @@ export async function updateChannelPrices(
     undefined,
     () =>
       post(context, '/bnbRatePrice/channelPrice/get', {
-        startDate: toZoneStartMs(range.from, profile.ianaTimeZone),
+        startDate: range.from,
         days: toOverseasDays(range.days),
       })
   );
