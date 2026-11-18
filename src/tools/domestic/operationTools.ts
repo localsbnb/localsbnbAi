@@ -43,7 +43,7 @@ const domesticDescriptions: Record<string, string> = {
   update_room_clean_state: '国内门店：将一个房间设为脏房或净房，与国内 PC 房态标记一致。仅支持 dirty（1）或 clean（3），先预览并确认。',
   query_channel_connection: '国内门店：只读查询指定渠道的账号、门店及房型连接状态。必须提供 channelId。',
   update_channel_prices: '国内门店：修改一个经核对的渠道价格产品，最长 30 天，仅绝对价格（分）。预览当前价后须明确确认。',
-  create_manual_order: '国内门店：创建单房、全日、未收款的手工订单。必须提供有效订单渠道、支付方式和固定 bookedTime 毫秒时间戳；会核对房态、报价和门店，预览后确认。',
+  create_manual_order: '国内门店：创建单房、全日、未收款的自来客手工订单。channelId 和 orderChannelId 固定为 0，无需选择或猜测渠道。必须提供支付方式和固定 bookedTime 毫秒时间戳；会核对房态、报价和门店，预览后确认。',
   map_channel_listing: '国内门店：将已核对的渠道门店或未关联渠道房型映射至本门店实体；不支持产品映射。预览后确认。',
   connect_channel_poi: '国内门店：从已存在的渠道账号创建一个渠道门店关联。必须指定 channelId、accountId、outPoiId；先核对账号与现有门店，再预览确认。',
   start_channel_connection: '国内门店：记录渠道授权基线并返回带目标门店和渠道的国内 PC openUrl。必须在客户端打开链接或展示可点击链接，不能只说已唤起；用户完成页面授权后再核验。需要 channelId；保留 baselineToken，无需用户抄写。',
@@ -99,7 +99,8 @@ export function getDomesticOperationTools(): ToolDefinition[] {
     };
     if (tool.name === 'query_channel_connection') properties.channelId = { type: 'string', minLength: 1 };
     if (tool.name === 'create_manual_order') Object.assign(properties, {
-      orderChannelId: { type: 'string', minLength: 1 },
+      channelId: { type: 'string', enum: ['0'], default: '0', description: '固定为 0，自来客手工录单。可省略。' },
+      orderChannelId: { type: 'string', enum: ['0'], default: '0', description: '订单来源固定为 0（自来客），不能选择其他渠道。可省略。' },
       paymentWayId: { type: 'string', minLength: 1 },
       bookedTime: { type: 'integer', minimum: 1600000000000, maximum: 4100000000000 },
     });
@@ -123,7 +124,7 @@ export function getDomesticOperationTools(): ToolDefinition[] {
           : tool.name === 'connect_channel_poi' ? ['channelId', 'accountId', 'outPoiId']
           : tool.name === 'start_channel_connection' ? ['channelId']
           : tool.name === 'complete_channel_connection' ? ['channelId', 'baselineToken']
-          : tool.name === 'create_manual_order' ? [...required, 'orderChannelId', 'paymentWayId', 'bookedTime']
+          : tool.name === 'create_manual_order' ? [...required, 'paymentWayId', 'bookedTime']
           : required },
       handler: async (args, context) => {
         try {

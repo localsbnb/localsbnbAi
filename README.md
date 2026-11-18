@@ -136,7 +136,7 @@ It will never do writes quietly. You always see the guest, dates, amounts, or cl
 
 Stdio and remote OAuth expose the same core business capabilities for the same property edition and permissions. Transport-specific login/session tools and domestic `cn_` prefixes may differ. A successful connection alone does not prove that a locally installed npm package is current.
 
-For WorkBuddy remote OAuth, use [`workbuddy/mcp.json`](workbuddy/mcp.json). For Stdio, use `localsbnb-mcp-server@1.0.19` or newer; the npm `1.0.17` package predates the domestic operation tools. Run `tools/list` after updating and check for `create_manual_order` (Stdio) or `cn_create_manual_order` (domestic remote OAuth with `orders:write`). Existing Java account permissions still apply. Version 1.0.19 also fixes overseas order and rate-query business-date parameters; domestic request formats remain unchanged.
+For WorkBuddy remote OAuth, use [`workbuddy/mcp.json`](workbuddy/mcp.json). For Stdio, use `localsbnb-mcp-server@1.0.20` or newer; the npm `1.0.17` package predates the domestic operation tools. Run `tools/list` after updating and check for `create_manual_order` (Stdio) or `cn_create_manual_order` (domestic remote OAuth with `orders:write`). Existing Java account permissions still apply. Version 1.0.19 also fixes overseas order and rate-query business-date parameters; domestic request formats remain unchanged.
 
 Log in to LocalsBnb and copy:
 
@@ -196,3 +196,5 @@ Answers follow the **language of the property** in LocalsBnb. You do not pick En
 ## Need a hand?
 
 [localsbnb.com](https://localsbnb.com/)
+
+Domestic manual bookings use walk-in source only: both channelId and orderChannelId are fixed to 0. Version 1.0.20 removes the need to choose a booking source, shows the walk-in source in the preview, and rejects nonzero channel overrides.

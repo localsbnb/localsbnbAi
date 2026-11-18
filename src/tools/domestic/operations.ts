@@ -463,7 +463,12 @@ export async function domesticCreateManualOrder(args: Record<string, unknown>, c
   domestic(context);
   const roomId = id(args.roomId, 'roomId');
   const roomCategoryId = id(args.roomCategoryId, 'roomCategoryId');
-  const orderChannelId = id(args.orderChannelId, 'orderChannelId');
+  // 手工录单固定自来客；兼容显式传 0，但禁止旧客户端或模型选择其他来源。
+  for (const field of ['channelId', 'orderChannelId']) {
+    if (args[field] !== undefined && args[field] !== '0')
+      invalid(`${field} must be "0" for a domestic walk-in order`);
+  }
+  const orderChannelId = '0';
   const paymentWayId = id(args.paymentWayId, 'paymentWayId');
   const checkInDate = ymd(args.checkInDate, 'checkInDate');
   const checkOutDate = ymd(args.checkOutDate, 'checkOutDate');
@@ -507,6 +512,7 @@ export async function domesticCreateManualOrder(args: Record<string, unknown>, c
   };
   const summary = { guestName, roomId, roomName: located.roomName, roomCategoryId,
     checkInDate, checkOutDate, nights, guestNum, orderChannelId, paymentWayId,
+    channelId: '0', orderChannelName: '自来客',
     quotedFen, priceFen, currency: 'CNY', paymentCollectedFen: 0 };
   return previewOrExecute(args, context, 'create_manual_order', '/order', payload, summary, summary,
     async (written) => {
